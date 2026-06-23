@@ -86,36 +86,6 @@ lot (0.54 to 0.92), routing clearly helps and the router beats random (0.925 vs 
 all three models sit around 0.79, there is nothing to route around, so the router ties both the best
 model and random routing. Routing pays off when the models genuinely differ.
 
-## Setup
-
-```bash
-# secrets live OUTSIDE the repo
-cp .env.example ~/.config/trinity/secrets.env   # fill in FIREWORKS_API_KEY, then: chmod 600
-source ~/.config/trinity/secrets.env
-
-uv venv && source .venv/bin/activate
-uv pip install -e .
-
-# confirm the three models answer
-python -m trinity.llm.fireworks_client --selftest
-```
-
-## Run
-
-```bash
-source ~/.config/trinity/secrets.env
-# train a per-task coordinator on the GPU
-bash scripts/run_remote.sh train --benchmark math500
-# rigorous eval (120 items, baselines averaged over 3 runs)
-python -m trinity.eval --benchmark math500 \
-    --theta experiments/math500/full_pilot/best_theta.npy \
-    --max-items 120 --single-reps 3 --out experiments/final/math_rigorous.json
-python scripts/cost_report.py --ledger cost_ledger.jsonl   # spend
-```
-
-Secrets never live in this repo: the SSH key sits in `~/.ssh/`, the Fireworks key in
-`~/.config/trinity/secrets.env`.
-
 ## Cost
 
 **$20.89** total, exact from the token ledger at real Fireworks prices (deepseek $6.56, glm $6.70,
