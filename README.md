@@ -1,4 +1,4 @@
-# TRINITY: a tiny LLM router
+# TinyRouter
 
 We built a small **coordinator** that, for every question, decides two things: **which** of three
 open-source LLMs should answer it, and **what role** that model should play (Thinker, Worker, or
@@ -50,7 +50,7 @@ Scores are fraction correct (0.792 = 79.2%).
 | system | score |
 | --- | --- |
 | glm-5p2 | 0.794 (best single) |
-| **TRINITY (router)** | **0.792** |
+| **TinyRouter** | **0.792** |
 | random routing | 0.792 |
 | deepseek-v4-pro | 0.747 |
 | kimi-k2p6 | 0.742 |
@@ -59,7 +59,7 @@ Scores are fraction correct (0.792 = 79.2%).
 
 | system | score |
 | --- | --- |
-| **TRINITY (router)** | **0.925** |
+| **TinyRouter** | **0.925** |
 | deepseek-v4-pro | 0.922 (best single) |
 | random routing | 0.875 |
 | glm-5p2 | 0.783 |
@@ -69,7 +69,7 @@ Scores are fraction correct (0.792 = 79.2%).
 
 | system | math | MMLU | average |
 | --- | --- | --- | --- |
-| **TRINITY (router)** | 0.792 | **0.925** | **0.858** |
+| **TinyRouter** | 0.792 | **0.925** | **0.858** |
 | deepseek-v4-pro | 0.747 | 0.922 | 0.835 |
 | random routing | 0.792 | 0.875 | 0.833 |
 | glm-5p2 | 0.794 | 0.783 | 0.789 |
