@@ -128,6 +128,34 @@ def test_cost_callback_fires_per_rollout():
     assert all(spend > 0 for _, spend in seen)
 
 
+def test_canonical_workflow_always_parses():
+    # The constrained decoder's canonical assembler must produce a proposal that
+    # ALWAYS passes the parse-gate, for any non-empty list of valid worker
+    # indices and any length up to MAX_STEPS. This is what makes parse_rate -> 1.0
+    # by construction.
+    from trinity.fugu.hf_backend import _canonical_workflow
+    from trinity.fugu.workflow import MAX_STEPS, parse_workflow
+
+    n_workers = len(POOL)
+    cases = []
+    for length in range(1, MAX_STEPS + 1):
+        cases.append([0] * length)
+        cases.append([min(i, n_workers - 1) for i in range(length)])
+        cases.append([(length - 1 - i) % n_workers for i in range(length)])
+    for ids in cases:
+        text = _canonical_workflow(ids)
+        wf, ok = parse_workflow(text, n_workers, allow_self=False)
+        assert ok, f"did not parse: {ids} -> {text!r}"
+        assert wf is not None and [s.model_id for s in wf.steps] == ids
+
+    # A self-call index (== n_workers) is valid only when recursion is allowed.
+    self_text = _canonical_workflow([n_workers])
+    wf, ok = parse_workflow(self_text, n_workers, allow_self=True)
+    assert ok and wf.steps[0].model_id == n_workers
+    _, ok_no_self = parse_workflow(self_text, n_workers, allow_self=False)
+    assert not ok_no_self
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

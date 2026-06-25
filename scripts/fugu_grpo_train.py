@@ -114,6 +114,8 @@ async def _run(args) -> int:
             sample_temperature=args.sample_temperature,
             gradient_accumulation=args.gradient_accumulation,
             proposal_prefix=args.proposal_prefix,
+            constrained=args.constrained_decoding,
+            constrained_allow_self=(args.max_depth > 0),
         ),
         worker_names=pool_models,
     )
@@ -153,6 +155,7 @@ async def _run(args) -> int:
                 "max_cost_usd": cfg.max_cost_usd,
                 "cost_warn_usd": warn_thresholds,
                 "proposal_prefix": args.proposal_prefix,
+                "constrained_decoding": args.constrained_decoding,
                 "format_warmup": warmup_stats,
             },
             indent=2,
@@ -224,6 +227,12 @@ def main() -> None:
     ap.add_argument("--max-prompt-tokens", type=int, default=4096, dest="max_prompt_tokens")
     ap.add_argument("--gradient-accumulation", type=int, default=1, dest="gradient_accumulation")
     ap.add_argument("--proposal-prefix", default="model_id = [", dest="proposal_prefix")
+    ap.add_argument(
+        "--constrained-decoding",
+        action="store_true",
+        dest="constrained_decoding",
+        help="structurally guarantee schema-valid proposals (parse_rate -> ~1.0)",
+    )
     ap.add_argument("--format-warmup-steps", type=int, default=0, dest="format_warmup_steps")
     ap.add_argument(
         "--format-warmup-batch-size", type=int, default=1, dest="format_warmup_batch_size"

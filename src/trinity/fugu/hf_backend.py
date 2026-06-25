@@ -12,9 +12,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from trinity.fugu.conductor import Proposal, build_prompt
+from trinity.fugu.workflow import MAX_STEPS
 from trinity.types import Task
 
 __all__ = ["HFBackendConfig", "HFPolicyBackend"]
+
+_DEFAULT_SUBTASK = "Solve the problem and end with the final answer in the required format."
 
 
 @dataclass
@@ -31,6 +34,12 @@ class HFBackendConfig:
     grad_clip: float = 1.0
     gradient_accumulation: int = 1
     proposal_prefix: str = "model_id = ["
+    # Constrained decoding: structurally guarantee a schema-valid proposal so the
+    # parse-gate cannot reject it. The policy still chooses the routing (how many
+    # steps, which worker per step); subtasks/access_list are assembled canonically.
+    constrained: bool = False
+    constrained_allow_self: bool = False  # keep in sync with max_depth > 0
+    constrained_max_steps: int = MAX_STEPS
 
 
 class HFPolicyBackend:
@@ -77,6 +86,9 @@ class HFPolicyBackend:
         if list(worker_names) != self.worker_names:
             self.worker_names = list(worker_names)
 
+        if self.cfg.constrained:
+            return self._propose_constrained(task, sample=sample)
+
         torch = self.torch
         prompt = self._prompt_text(task)
         enc = self.tokenizer(
@@ -119,6 +131,127 @@ class HFPolicyBackend:
             prompt_tokens=prompt_len,
             completion_tokens=int(gen_ids.numel()),
         )
+
+    # ------------------------------------------------------------------ #
+    # Constrained decoding
+    # ------------------------------------------------------------------ #
+    def _propose_constrained(self, task: Task, *, sample: bool) -> Proposal:
+        """Emit a workflow that is schema-valid by construction.
+
+        The policy genuinely chooses the routing: a constrained decode samples
+        the per-step worker index (and the number of steps) from the model's own
+        next-token distribution, restricted to the legal worker ids and the
+        list-continue/close tokens. The subtask strings and the access DAG are
+        then assembled canonically (always non-empty, always a valid DAG), so the
+        resulting proposal always passes ``parse_workflow``. Parse-validity comes
+        from the canonical assembly; the constrained sample only supplies routing
+        diversity (so two rollouts can route differently and produce real GRPO
+        advantage).
+        """
+        prompt = self._prompt_text(task)  # ends with the "model_id = [" prefix
+        enc = self.tokenizer(
+            prompt,
+            return_tensors="pt",
+            truncation=True,
+            max_length=self.cfg.max_prompt_tokens,
+        )
+        input_ids = enc["input_ids"].to(self.device)
+        attention_mask = enc["attention_mask"].to(self.device)
+        prompt_len = int(input_ids.shape[1])
+
+        model_ids, n_gen = self._constrained_int_list(
+            input_ids, attention_mask, sample=sample
+        )
+        n_workers = len(self.worker_names)
+        hi = n_workers if self.cfg.constrained_allow_self else max(0, n_workers - 1)
+        max_steps = max(1, min(int(self.cfg.constrained_max_steps), MAX_STEPS))
+        clamped = [min(max(0, int(m)), hi) for m in model_ids][:max_steps]
+        if not clamped:
+            clamped = [0]
+
+        text = _canonical_workflow(clamped)
+        return Proposal(
+            text=text,
+            prompt_tokens=prompt_len,
+            completion_tokens=int(n_gen),
+        )
+
+    def _constrained_int_list(self, input_ids, attention_mask, *, sample: bool):
+        """Constrained decode of the ``model_id`` list: ints then ``,``/``]``.
+
+        Returns ``(worker_ids, n_generated_tokens)``. Falls back to ``[0]`` if the
+        tokenizer cannot supply clean single-token digits/brackets (the canonical
+        assembly still guarantees a parseable proposal in that case).
+        """
+        torch = self.torch
+        n_workers = len(self.worker_names)
+        hi = n_workers if self.cfg.constrained_allow_self else max(0, n_workers - 1)
+        max_steps = max(1, min(int(self.cfg.constrained_max_steps), MAX_STEPS))
+
+        digit_ids: dict[int, int] = {}
+        for d in range(0, hi + 1):
+            tid = self._single_token_id(str(d))
+            if tid is not None:
+                digit_ids[tid] = d
+        comma_id = self._single_token_id(",")
+        close_id = self._single_token_id("]")
+        if not digit_ids or close_id is None:
+            return [0], 0
+
+        cur_ids = input_ids
+        cur_mask = attention_mask
+        out: list[int] = []
+        state = "digit"
+        n_gen = 0
+        gen_cap = max_steps * 3 + 2
+
+        self.model.eval()
+        with torch.inference_mode():
+            while n_gen < gen_cap:
+                logits = self.model(
+                    input_ids=cur_ids, attention_mask=cur_mask
+                ).logits[:, -1, :]
+                if state == "digit":
+                    allowed = list(digit_ids.keys())
+                else:
+                    allowed = [close_id]
+                    if comma_id is not None and len(out) < max_steps:
+                        allowed.insert(0, comma_id)
+                tok = self._pick_from(logits, allowed, sample)
+                cur_ids = torch.cat([cur_ids, tok.view(1, 1)], dim=1)
+                cur_mask = torch.cat(
+                    [cur_mask, torch.ones((1, 1), dtype=cur_mask.dtype, device=cur_mask.device)],
+                    dim=1,
+                )
+                n_gen += 1
+                tok_id = int(tok.item())
+                if state == "digit":
+                    out.append(digit_ids[tok_id])
+                    state = "sep"
+                else:
+                    if tok_id == close_id:
+                        break
+                    state = "digit"
+        self.model.train()
+        return (out or [0]), n_gen
+
+    def _pick_from(self, logits, allowed_ids: list[int], sample: bool):
+        """Pick one token from ``allowed_ids`` by masking all other logits to -inf."""
+        torch = self.torch
+        row = logits[0]
+        idx = torch.tensor(allowed_ids, device=row.device, dtype=torch.long)
+        masked = torch.full_like(row, float("-inf"))
+        masked[idx] = row[idx]
+        if sample:
+            temp = max(1e-5, self.cfg.sample_temperature)
+            probs = torch.softmax(masked / temp, dim=-1)
+            return torch.multinomial(probs, num_samples=1)[0]
+        return torch.argmax(masked)
+
+    def _single_token_id(self, s: str):
+        """Token id for ``s`` iff it encodes to exactly one token, else ``None``."""
+        ids = self.tokenizer.encode(s, add_special_tokens=False)
+        return ids[0] if len(ids) == 1 else None
 
     def update(self, groups: list) -> dict:
         """Apply one GRPO policy-gradient update.
@@ -300,8 +433,26 @@ def _torch_dtype(torch, name: str):
 
 
 def _format_warmup_target(model_id: int) -> str:
-    return (
-        f"model_id = [{int(model_id)}]\n"
-        'subtasks = ["Solve the problem and end with the final answer in the required format."]\n'
-        "access_list = [[]]"
-    )
+    return _canonical_workflow([int(model_id)])
+
+
+def _canonical_workflow(model_ids: list[int]) -> str:
+    """Assemble a guaranteed parse-valid workflow from a list of worker indices.
+
+    Each step gets the canonical subtask; the access DAG reads only the query for
+    every step except the final one, which reads ``"all"`` prior outputs to
+    synthesize (always a valid DAG since it points strictly backward). A
+    single-step workflow uses ``[]`` (query only). The result always satisfies
+    :func:`trinity.fugu.workflow.parse_workflow` for any non-empty ``model_ids``.
+    """
+    ids = list(model_ids) or [0]
+    n = len(ids)
+    models = ", ".join(str(int(m)) for m in ids)
+    import json as _json
+
+    subs = ", ".join(_json.dumps(_DEFAULT_SUBTASK) for _ in range(n))
+    if n == 1:
+        access = "[]"
+    else:
+        access = ", ".join(["[]"] * (n - 1) + ['"all"'])
+    return f"model_id = [{models}]\nsubtasks = [{subs}]\naccess_list = [{access}]"

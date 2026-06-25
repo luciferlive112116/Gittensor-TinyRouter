@@ -18,6 +18,32 @@ protocol. **Newest entries at the top.** Tag each entry with one or more of:
 
 ---
 
+## 2026-06-25 — Phase-0 paid GRPO: pipeline works, but parse_rate is the bottleneck (not routing)  #repro #finding #decision
+
+**Context:** first *paid* GRPO run of the trainable HF Conductor (Qwen3-0.6B) on `trinity-gpu`
+GPU 3. Config g16 × 5 iters × 8 q over a 64-task math500 train pool, 30-step format warmup,
+hard cap `--max-cost-usd 25`, warnings at $5/$10/$20, exact spend appended to `cost_ledger.jsonl`.
+**Expected:** the format warmup + GRPO would lift parse_rate enough for routing reward to climb.
+**Actual:** clean finish (`aborted: false`), **$0.151 total** (704 calls / 640 runs), final parse_rate
+**0.047** and final accuracy **0.047**. parse_rate per iter: 0.008 → 0.039 → 0.047 → 0.031 → 0.047 —
+fluctuating in a 0.03–0.05 band, no breakout. (Lifetime ledger reads ~$21; that is the cumulative
+June-23 eval spend, NOT this run — `cost_report.py` sums the whole file. This run = lines 6994–7053.)
+**Root cause:** base 0.6B cannot reliably emit the three-list workflow grammar; a 30-step warmup is far
+too weak. With ~95% of rollouts failing the parse-gate, GRPO advantages are computed over degenerate
+~0-reward groups, so there is almost no signal to climb.
+**Key diagnostic:** at the final iteration **accuracy == parse_rate** — i.e. *when* the policy emits a
+valid workflow, the routed worker solves it essentially every time. The bottleneck is **format, not
+routing quality.** Routing is already sound; the model just can't produce the schema.
+**Fix / decision:** stop trying to fix format probabilistically. Add **constrained/canonical decoding**
+to `HFPolicyBackend` (flag-gated): structurally guarantee a schema-valid proposal so parse_rate → ~1.0
+by construction and GRPO gets dense reward from iter 0. Validate free (`--stub-pool`, $0) that parse_rate
+hits ~1.0 before any further paid spend.
+**Follow-up:** (1) prove parse_rate ~1.0 offline; (2) short paid GRPO to see routing accuracy clear the
+0.808 best-single baseline; (3) cleanup: `SyntaxWarning: invalid escape sequence` spam from a non-raw
+regex string on the worker-output/grader path.
+
+---
+
 ## 2026-06-25 — Fugu GRPO GPU-3 free smoke completed; schema and stub-cost gotchas fixed  #repro #finding #mistake #decision
 
 **Context:** ran the new HF Conductor backend on `trinity-gpu` with `CUDA_VISIBLE_DEVICES=3` and
