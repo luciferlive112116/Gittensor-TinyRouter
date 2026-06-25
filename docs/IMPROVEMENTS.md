@@ -113,3 +113,14 @@ On our current 3 same-tier models, the ceiling is the binding constraint (this i
 `project_harness` reached independently). The single most informative next step is the **oracle-ceiling
 diagnostic**; if the gap is thin, the real lever is the **model pool**, and the warm-start + shaped-fitness +
 LRA changes are what to do if and when we add a genuinely complementary model.
+
+## Related effort: the Fugu / Conductor direction (orthogonal to this doc)
+
+Everything above stays inside the **routing** paradigm (make the CMA-ES head better). A separate 2026
+research effort, in [`docs/fugu/FUGU_REPLICATION_RESEARCH.md`](./fugu/FUGU_REPLICATION_RESEARCH.md) (sources
+indexed in [`docs/fugu/REFERENCE_INDEX.md`](./fugu/REFERENCE_INDEX.md)), looks at replicating Sakana **Fugu**,
+which is TRINITY **plus** the Conductor (arXiv:2512.04388): an RL-trained natural-language orchestrator that
+emits workflows (subtask + worker + access-list), recurses into itself, and synthesizes. That is a second
+model (GRPO), not a head tune, so it does not overlap with the techniques here. Note that Fugu's *base* tier
+recipe (SFT on soft per-model performance distributions, then sep-CMA-ES) independently validates #2 and #3
+above; the likely missing ingredient was soft performance targets for the SFT stage.
