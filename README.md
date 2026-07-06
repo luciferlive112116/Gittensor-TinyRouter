@@ -1,31 +1,81 @@
 # TinyRouter
 
+Evolved LLM coordinator — a **routing accuracy competition** on
+[Gittensor](https://github.com/entrius/gittensor) (Bittensor Subnet 74).
 
-We built a small **coordinator** that, for every question, decides two things: **which** of three
+[![Website](https://img.shields.io/badge/website-tinyrouter.ai-blue)](https://james-cuda.github.io/Gittensor-TinyRouter/)
+[![Gittensor](https://img.shields.io/badge/Gittensor-SN74-orange)](https://github.com/entrius/gittensor)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+Train a tiny coordinator head that decides which LLM to call for any question.
+Beat the current best accuracy on the hidden benchmark, and your PR gets merged —
+earning you TAO.
+
+**Quick links:** [Website](https://james-cuda.github.io/Gittensor-TinyRouter/) ·
+[Leaderboard](leaderboard.json) · [Submission Guide](SUBMITTING.md) ·
+[Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md)
+
+---
+
+## Compete (earn TAO)
+
+```
+  1. TRAIN             2. PACK              3. SUBMIT           4. EARN
+  CMA-ES on GPU        extract head         open a PR to        PR merged →
+  ~$25–65/run          + SVF + receipt      this repo           TAO via Gittensor
+```
+
+### Quick start
+
+```bash
+git clone https://github.com/James-CUDA/Gittensor-TinyRouter.git
+cd Gittensor-TinyRouter
+pip install -e ".[dev]"
+source ~/.config/trinity/secrets.env   # exports FIREWORKS_API_KEY
+
+# 1. Train a routing head
+CUDA_VISIBLE_DEVICES=0 python -m trinity.train \
+    --benchmark math500 --run-name my-submission
+
+# 2. Pack for submission
+python scripts/pack_submission.py \
+    --run-dir experiments/math500/my-submission \
+    --miner-name your-name --benchmark math500
+
+# 3. Open a PR with submissions/your-name/1/
+# 4. Maintainer runs pr_eval.py — if you beat the current best, you win
+```
+
+### Rules
+
+| Rule | Detail |
+|---|---|
+| **Submission rate** | 1 per benchmark per week (enforced in code) |
+| **Original work** | Every submission is cosine-similarity checked against all previous heads. Copies rejected |
+| **Hidden benchmark** | Encrypted, never revealed. 150 eval + 50 audit questions |
+| **Score feedback** | Winners get full results. Losers get only composite score + delta |
+| **Receipt** | Must show cost ≥ $15 and a plausible CMA-ES fitness curve |
+| **Evaluation** | 70% cached single-turn + 15% live multi-turn + 10% efficiency + 5% novelty |
+
+Full details: [SUBMITTING.md](SUBMITTING.md) · [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### Current leaders
+
+See the [live leaderboard](leaderboard.json) or the [website](https://james-cuda.github.io/Gittensor-TinyRouter/).
+
+---
+
+## What is TinyRouter?
+
+A small **coordinator** that, for every question, decides two things: **which** of three
 open-source LLMs should answer it, and **what role** that model should play (Thinker, Worker, or
 Verifier). The coordinator is deliberately tiny and cheap. A frozen **0.6B** encoder reads the
 question into a single vector, and a **~10K-parameter** head turns that vector into the routing
-decision. It is trained by **separable CMA-ES**, a derivative-free evolution strategy, against a simple
-right/wrong reward. The coordinator never solves the question itself; it only learns who to ask.
+decision. It is trained by **separable CMA-ES**, a derivative-free evolution strategy, against a
+simple right/wrong reward. The coordinator never solves the question itself; it only learns who to ask.
 
 The method follows TRINITY (Xu et al., ICLR 2026, [arXiv:2512.04695](https://arxiv.org/abs/2512.04695)),
 rebuilt from scratch with an all open-source model pool served through Fireworks AI.
-
-## What we did
-
-- Implemented the full coordinator: the 0.6B encoder feature, the ~10K routing head, the three roles,
-  the multi-turn loop (up to 5 turns, terminated by a Verifier accept), and the sep-CMA-ES trainer.
-- Wired a 3-model open-source pool plus an automatic grader (exact-match for math, letter-match for
-  MMLU) that produces the binary reward.
-- Trained per-task coordinators by evolution: breed thousands of candidate heads, keep the ones that
-  route best, repeat.
-- Evaluated rigorously on 120 held-out questions, with every single-model baseline averaged over 3 runs
-  to remove run-to-run noise, against each model alone and against random routing.
-- Built an **oracle-ceiling diagnostic** to ask whether the pool even leaves room for routing to help,
-  and used it to decide where improvement effort was worth spending.
-- Implemented and tested two upgrades from that diagnostic (supervised warm-start of the head, shaped
-  training fitness) and measured them on the task with real headroom.
-- Tracked every dollar of API spend and logged each result.
 
 ## Model pool
 
@@ -36,6 +86,7 @@ rebuilt from scratch with an all open-source model pool served through Fireworks
 | C    | `kimi-k2p6`       | general          |
 
 The 0.6B encoder and the evolution loop run on a single NVIDIA H200; the three LLMs are called over HTTP.
+All miners route to the same pool — fair comparison, routing skill is what matters.
 
 ## How it works
 
@@ -45,7 +96,7 @@ The 0.6B encoder and the evolution loop run on a single NVIDIA H200; the three L
 4. Steps 1 to 3 repeat for up to 5 turns; a Verifier turn can accept and stop early.
 5. The final answer is graded right/wrong, and that reward drives the evolutionary training.
 
-## Results
+## Research results
 
 Rigorous eval: 120 held-out questions per task; single-model baselines are the mean over 3 runs.
 Scores are fraction correct (0.792 = 79.2%).
@@ -86,28 +137,22 @@ The tiny router scores **0.858 on average, higher than any single model**. No si
 both tasks: deepseek is the knowledge specialist, glm is the math specialist. The router wins the
 average by sending each task to the right specialist.
 
-Reading it straight: the win is **across tasks, not within a task**. On MMLU, where the models differ a
-lot (0.54 to 0.92), routing clearly helps and the router beats random (0.925 vs 0.875). On math, where
-all three models sit around 0.79, there is nothing to route around, so the router ties both the best
-model and random routing. Routing pays off when the models genuinely differ.
+On MMLU, where the models differ a lot (0.54 to 0.92), routing clearly helps and the router beats
+random routing (0.925 vs 0.875). On math, where all three models sit around 0.79, there is little
+to route around, so the router ties both the best model and random routing. **Routing pays off when
+the models genuinely differ.**
 
+### Oracle ceiling diagnostic
 
 | benchmark | best single | perfect router | real headroom (95% CI) | verdict |
 | --- | --- | --- | --- | --- |
 | math500 | 0.808 | **0.856** | **+0.049 [0.005, 0.085]** | ROUTER_BOUND |
 | MMLU | 0.939 | ≥0.939 | +0.025 [0.000, 0.058] | inconclusive (near-ceiling) |
 
-This overturned the easy reading of math as "no benefit." There **is** about 4.9 points of real,
-achievable headroom on math; our trained router just captures none of it. So the math limit is the
-router, not the pool. MMLU sits near its ceiling, where deepseek already dominates and the router
-already matches it.
+There is about 4.9 points of real, achievable headroom on math — the current router captures none of it.
+This is the gap miners compete to close.
 
-## Trying to capture it: warm-start + shaped fitness
-
-The diagnostic pointed effort at math, so we tried two upgrades: warm-starting the head with a
-supervised fit against per-(question, model) correctness labels (instead of starting the evolution from
-a blank head), and shaping the training reward (format bonus, turn penalty, variance reweighting) while
-keeping the **eval pure right/wrong**.
+### Warm-start + shaped fitness experiment
 
 | system | math (held-out 120) |
 | --- | --- |
@@ -117,36 +162,55 @@ keeping the **eval pure right/wrong**.
 | random routing | 0.733 |
 
 The eval samples each model once per question, and that sampling noise is large: random routing alone
-swung from 0.792 to 0.733 between runs with nothing changed. A swing that size swamps a 1.6-point router
-delta. We did not run the clean control (blank-init, pure-binary, same settings), so there is no causal
-claim that warm-start or shaping moved the number. The result is still below the best single model
-(0.817) and below the 0.856 ceiling, so the headroom the diagnostic found remains on the table. The two
-upgrades are implemented and covered by 54 offline tests; whether they move the held-out score is
-unproven.
+swung from 0.792 to 0.733 between runs with nothing changed. A swing that size swamps a 1.6-point
+router delta. The warm-start and shaped-fitness upgrades are implemented and covered by 54 offline
+tests; whether they move the held-out score is unproven.
+
+## What we did
+
+- Implemented the full coordinator: the 0.6B encoder feature, the ~10K routing head, the three roles,
+  the multi-turn loop (up to 5 turns, terminated by a Verifier accept), and the sep-CMA-ES trainer.
+- Wired a 3-model open-source pool plus an automatic grader (exact-match for math, letter-match for
+  MMLU) that produces the binary reward.
+- Trained per-task coordinators by evolution: breed thousands of candidate heads, keep the ones that
+  route best, repeat.
+- Evaluated rigorously on 120 held-out questions, with every single-model baseline averaged over 3 runs
+  to remove run-to-run noise.
+- Built an **oracle-ceiling diagnostic** to measure routing headroom.
+- Built the **accuracy competition infrastructure**: submission pipeline, 8 anti-cheat gates,
+  encrypted hidden benchmark, live leaderboard.
+- Tracked every dollar of API spend (hash-chain verified cost ledger).
 
 ## Cost
 
-Tracked exactly from the token ledgers at real Fireworks prices:
+Tracked exactly from the hash-chain-verified token ledgers at real Fireworks prices:
 
 - Core replication and rigorous eval: **$20.89** (deepseek $6.56, glm $6.70, kimi $7.64).
 - Oracle-ceiling diagnostic: **~$14**.
 - Warm-start + shaped-fitness experiment (label collection, retrain, eval): **$27.22**.
 
-## Compete (earn TAO)
-
-TinyRouter is a **routing accuracy competition** on [Gittensor](https://github.com/entrius/gittensor)
-(Bittensor Subnet 74). Train a routing head that beats the current best accuracy on
-the hidden benchmark, and your PR gets merged — earning you TAO.
+## Repository
 
 ```
-  1. TRAIN        2. PACK           3. SUBMIT         4. EARN
-  CMA-ES on GPU   extract head      open a PR to      PR merged →
-  ~$25-65/run     + SVF + receipt   this repo         TAO via Gittensor
+tinyrouter/
+├── index.html             # project website
+├── leaderboard.json        # live king-of-the-hill data
+├── SUBMITTING.md           # miner competition guide
+├── CONTRIBUTING.md         # contribution rules
+├── ROADMAP.md              # future direction
+├── src/trinity/            # coordinator (encoder, head, SVF, trainer, eval)
+├── scripts/                # pack_submission, pr_eval, build_benchmark, audit_eval
+├── configs/                # model pool + training config
+├── tests/                  # 54+ tests
+└── docs/                   # SPEC, JOURNAL, PAPER_NOTES
 ```
 
-**Current leaders:** see [leaderboard.json](leaderboard.json)
-**How to compete:** read [SUBMITTING.md](SUBMITTING.md)
-**Rules:** [CONTRIBUTING.md](CONTRIBUTING.md)
+## Links
 
-Only accuracy-improving heads are merged. The hidden benchmark is never revealed.
-General contributions (docs, fixes) are welcome but earn no TAO.
+- [Website](https://james-cuda.github.io/Gittensor-TinyRouter/)
+- [Leaderboard](leaderboard.json)
+- [Submission Guide](SUBMITTING.md)
+- [Contributing](CONTRIBUTING.md)
+- [Roadmap](ROADMAP.md)
+- [TRINITY Paper (arXiv:2512.04695)](https://arxiv.org/abs/2512.04695)
+- [Gittensor](https://github.com/entrius/gittensor)
