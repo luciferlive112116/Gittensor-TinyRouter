@@ -1,32 +1,35 @@
-# The coordinated LLM pool (open-source, served by Fireworks AI).
+# The coordinated LLM pool (served through OpenRouter's OpenAI-compatible API).
 # Roles are assigned dynamically by the coordinator at runtime; this file only
 # declares which models exist and their per-call defaults.
 #
 # ===== Adding a new model =====
-# 1. Add a new entry under `pool:` with a short `name` and the full Fireworks `id`.
+# 1. Add a new entry under `pool:` with a short `name` and the full OpenRouter model slug.
 # 2. Add pricing to the PRICES dict in scripts/cost_report.py.
-# 3. Run the selftest: python -m trinity.llm.fireworks_client --selftest
+# 3. Run the selftest: python -m trinity.llm.openrouter_client --selftest
 # 4. Update the model pool table in README.md.
 # 5. The coordinator head dimension (n_a = L + 3) will auto-adjust from pool size.
 #
 # Example:
 #   - name: claude-opus-4-8
-#     id: "accounts/fireworks/models/claude-opus-4-8"
+#     id: "anthropic/claude-opus-4.1"
 
-fireworks:
-  base_url: "https://api.fireworks.ai/inference/v1"
-  api_key_env: "FIREWORKS_API_KEY"   # value read from env; NEVER hardcode here
-  timeout_s: 180                      # reasoning models can be slow; retry on timeout
-  max_retries: 10                     # ride through sustained 429 windows (heavy multi-rep evals)
-  max_concurrency: 8                  # parallel in-flight requests; 429s absorbed by the retry headroom above
+openrouter:
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"   # value read from env; NEVER hardcode here
+  timeout_s: 180                      # long-context / reasoning models can be slow
+  max_retries: 10                     # ride through transient provider and gateway hiccups
+  max_concurrency: 8
+  http_referer: ""
+  app_title: "Gittensor TinyRouter"
+  provider: {}
 
 pool:
-  - name: deepseek-v4-pro
-    id: "accounts/fireworks/models/deepseek-v4-pro"
-  - name: glm-5p2
-    id: "accounts/fireworks/models/glm-5p2"
-  - name: kimi-k2p6
-    id: "accounts/fireworks/models/kimi-k2p6"
+  - name: qwen3.5-35b-a3b
+    id: "qwen/qwen3.5-35b-a3b"
+  - name: minimax-m3
+    id: "minimax/minimax-m3"
+  - name: deepseek-v4-flash
+    id: "deepseek/deepseek-v4-flash"
 
 # Per-role decoding defaults. Confirm/override against docs/SPEC.md once the
 # paper's exact decoding settings are extracted. [provisional]

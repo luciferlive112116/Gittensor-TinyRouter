@@ -30,7 +30,7 @@ Concurrency model (see docs/SPEC.md §0.3.7, §5.2):
   - Candidates are evaluated SEQUENTIALLY because SVF mutates the single shared SLM's
     weights in place; two candidates cannot be live on the GPU at once.
   - Within one candidate, the `m_cma` trajectories share θ, so their (fast, serialized)
-    SLM forwards interleave while the (slow) Fireworks calls run concurrently.
+    SLM forwards interleave while the (slow) hosted-model calls run concurrently.
 """
 from __future__ import annotations
 

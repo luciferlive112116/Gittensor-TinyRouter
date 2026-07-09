@@ -39,7 +39,7 @@ always welcome. These PRs follow normal open-source workflow.
 git clone https://github.com/<org>/tinyrouter.git
 cd tinyrouter
 pip install -e ".[dev]"
-source ~/.config/trinity/secrets.env   # exports FIREWORKS_API_KEY
+source ~/.config/trinity/secrets.env   # exports OPENROUTER_API_KEY
 ```
 
 See [AGENTS.md](AGENTS.md) for the full compute environment description.

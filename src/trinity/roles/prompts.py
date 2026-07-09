@@ -3,7 +3,7 @@
 Implements the §4.4 system-prompt templates (THINKER / WORKER / VERIFIER) and a
 readable transcript renderer. The coordinator's head picks the agent + role; this
 module turns that choice plus the running transcript into OpenAI-style chat
-messages that are sent to the selected Fireworks pool model.
+messages that are sent to the selected hosted pool model.
 
 Design notes (per SPEC §4.4 / §4.5):
 - The system message carries the role contract; the user message carries the
@@ -112,7 +112,7 @@ def build_messages(
 
     Returns:
         ``[{"role": "system", "content": ...}, {"role": "user", "content": ...}]``
-        suitable for ``FireworksPool.chat``.
+        suitable for ``OpenRouterPool.chat``.
 
     Raises:
         KeyError: if ``role`` is not one of the three known roles.

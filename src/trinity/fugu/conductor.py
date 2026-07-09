@@ -3,7 +3,7 @@
 Two implementations:
 
 * :class:`PromptedConductor` is a ZERO-TRAINING baseline. It asks a chat model
-  (any Fireworks pool model, or a dedicated small model) to emit the three-list
+  (any hosted pool model, or a dedicated small model) to emit the three-list
   workflow. It establishes the "untrained Fugu-Ultra" reference the GRPO-trained
   Conductor must beat, and it is the cheapest way to exercise the full
   propose -> parse -> execute -> grade pipeline on real models.

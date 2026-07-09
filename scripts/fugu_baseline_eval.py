@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Prompted-baseline evaluation of the Fugu Conductor over the open-source pool.
+"""Prompted-baseline evaluation of the Fugu Conductor over the OpenRouter pool.
 
-ZERO training: a :class:`PromptedConductor` (a Fireworks model) emits the
-workflow, the pool (deepseek-v4-pro / glm-5p2 / kimi-k2p6) executes it, and we
+ZERO training: a :class:`PromptedConductor` (an OpenRouter model) emits the
+workflow, the pool (qwen3.5-35b-a3b / minimax-m3 / deepseek-v4-flash) executes it, and we
 report PURE-binary accuracy + parse rate + EXACT API cost. The per-query 0/1 it
 writes feeds ``scripts/oracle_ceiling.py --analyze --trinity-per-query`` so the
 Conductor can be compared against best-single and the routing ceiling on the
@@ -52,9 +52,9 @@ async def _run(args) -> int:
     from trinity.fugu.conductor import PromptedConductor
     from trinity.fugu.cost import price_table
     from trinity.fugu.eval import evaluate
-    from trinity.llm.fireworks_client import FireworksPool
+    from trinity.llm.openrouter_client import OpenRouterPool
 
-    pool = FireworksPool(args.models)
+    pool = OpenRouterPool(args.models)
     pool_models = list(pool.models)
     conductor = PromptedConductor(
         pool, args.conductor_model, max_tokens=args.conductor_max_tokens
@@ -111,7 +111,7 @@ def main() -> None:
     ap.add_argument("--split", default="test")
     ap.add_argument("--tasks-json", default="", dest="tasks_json")
     ap.add_argument("--models", default=str(_REPO / "configs" / "models.yaml"))
-    ap.add_argument("--conductor-model", default="deepseek-v4-pro", dest="conductor_model")
+    ap.add_argument("--conductor-model", default="deepseek-v4-flash", dest="conductor_model")
     ap.add_argument("--conductor-max-tokens", type=int, default=1024, dest="conductor_max_tokens")
     ap.add_argument("--max-items", type=int, default=120, dest="max_items")
     ap.add_argument("--reps", type=int, default=1)

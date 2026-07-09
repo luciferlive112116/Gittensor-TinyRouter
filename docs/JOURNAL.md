@@ -18,6 +18,14 @@ protocol. **Newest entries at the top.** Tag each entry with one or more of:
 
 ---
 
+## 2026-07-09 — Hosted pool switched from Fireworks to OpenRouter-only  #decision #finding
+**Context:** the repo had drifted: current roadmap/competition planning had already moved to the `qwen3.5-35b-a3b` / `minimax-m3` / `deepseek-v4-flash` pool, but the runnable code, scripts, and environment contract still assumed Fireworks plus `FIREWORKS_API_KEY`.
+**Expected:** one hosted-provider path, one API key contract, one default model pool, and pricing/config docs that all agree.
+**Actual:** migrated the live client/config path to OpenRouter-only, added `trinity.llm.openrouter_client`, switched the default pool in `configs/models.yaml`, updated remote scripts to require `OPENROUTER_API_KEY`, updated active train/eval/smoke entrypoints, and refreshed default pricing tables to the OpenRouter list prices for the new pool.
+**Root cause:** repository planning evolved faster than the implementation layer, leaving a split-brain state between docs and executable code.
+**Fix / decision:** OpenRouter is now the only supported hosted-model provider in the live path. A small `fireworks_client.py` import shim remains only for backward compatibility with stale local scripts, but it aliases the OpenRouter client and no longer introduces a second provider contract.
+**Follow-up:** historical notes/results that explicitly describe prior Fireworks runs are preserved as historical records; only the live operational path was migrated.
+
 ## 2026-07-09 — Roadmap realigned to the SN74 three-benchmark competition plan  #decision
 **Context:** after reframing the README around the SN74 competition loop, `ROADMAP.md` was still describing the old math500/MMLU competition shape and did not reflect the new target benchmarks or the staged TRINITY-then-Conductor plan.
 **Expected:** the roadmap should describe the current competition objective, frozen-protocol requirements, benchmark-adapter work, oracle-headroom gate, shared-head training path, miner PR flow, and the later benchmark/model-pool expansion path.

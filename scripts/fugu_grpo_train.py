@@ -3,10 +3,10 @@
 
 Two modes:
 
-* ``--stub-pool``: no Fireworks calls and no spend. The local HF Conductor still
+* ``--stub-pool``: no hosted-model calls and no spend. The local HF Conductor still
   loads, samples workflows, and takes GRPO updates against a deterministic fake
   worker. Use this first on the GPU box to validate CUDA/model plumbing.
-* default: paid Fireworks worker rollouts. Requires ``FIREWORKS_API_KEY`` and a
+* default: paid OpenRouter worker rollouts. Requires ``OPENROUTER_API_KEY`` and a
   conservative ``--max-cost-usd`` cap.
 """
 from __future__ import annotations
@@ -68,9 +68,9 @@ class StubPool:
     """No-spend worker pool for CUDA/backend smoke tests."""
 
     models = {
-        "deepseek-v4-pro": "stub/deepseek-v4-pro",
-        "glm-5p2": "stub/glm-5p2",
-        "kimi-k2p6": "stub/kimi-k2p6",
+        "qwen3.5-35b-a3b": "stub/qwen3.5-35b-a3b",
+        "minimax-m3": "stub/minimax-m3",
+        "deepseek-v4-flash": "stub/deepseek-v4-flash",
     }
 
     async def chat(self, model, messages, **kwargs):
@@ -94,10 +94,10 @@ async def _run(args) -> int:
         prices[CONDUCTOR_KEY] = (0.0, 0.0)
     else:
         if args.max_cost_usd <= 0:
-            raise SystemExit("paid Fireworks mode requires --max-cost-usd > 0")
-        from trinity.llm.fireworks_client import FireworksPool
+            raise SystemExit("paid OpenRouter mode requires --max-cost-usd > 0")
+        from trinity.llm.openrouter_client import OpenRouterPool
 
-        pool = FireworksPool(args.models)
+        pool = OpenRouterPool(args.models)
         prices = price_table(conductor_local=True)
 
     pool_models = list(pool.models)

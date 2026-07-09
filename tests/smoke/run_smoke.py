@@ -1,7 +1,7 @@
 """TRINITY smoke-test ladder (docs/SPEC.md §11).
 
 Each rung is cheap and gates the next. Run the CPU-only subset anywhere; run the
-full ladder on the GPU box (GPU 5) with the Fireworks key sourced.
+full ladder on the GPU box (GPU 5) with the OpenRouter key sourced.
 
     # CPU only (no torch/GPU/network needed): S3, S4, S5, S7
     python -m tests.smoke.run_smoke --cpu
@@ -227,9 +227,9 @@ def s2() -> tuple[bool, str]:
 
 
 def s6() -> tuple[bool, str]:
-    from trinity.llm.fireworks_client import FireworksPool
+    from trinity.llm.openrouter_client import OpenRouterPool
 
-    pool = FireworksPool()
+    pool = OpenRouterPool()
 
     async def _run():
         import httpx
@@ -254,11 +254,11 @@ def s6() -> tuple[bool, str]:
 
 def s8() -> tuple[bool, str]:
     from trinity.coordinator.policy import CoordinatorPolicy
-    from trinity.llm.fireworks_client import FireworksPool
+    from trinity.llm.openrouter_client import OpenRouterPool
     from trinity.optim.fitness import evaluate_candidate
     from trinity.orchestration.dataset import load_tasks
 
-    pool = FireworksPool()
+    pool = OpenRouterPool()
     pool_models = list(pool.models)
     policy, spec = CoordinatorPolicy.build(n_models=len(pool_models))
     assert spec.n_svf == int(policy.svf.num_scales), "spec/svf mismatch"

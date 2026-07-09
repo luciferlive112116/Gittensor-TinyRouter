@@ -14,8 +14,8 @@ export HF_HOME="${HF_HOME:-$TRINITY_REMOTE_DIR/.cache/hf}"
 export TRANSFORMERS_CACHE="$HF_HOME"
 
 # Fail loudly if the key is missing — never let a run start unauthenticated.
-if [[ -z "${FIREWORKS_API_KEY:-}" ]]; then
-  echo "ERROR: FIREWORKS_API_KEY not set. Run: source ~/.config/trinity/secrets.env" >&2
+if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+  echo "ERROR: OPENROUTER_API_KEY not set. Run: source ~/.config/trinity/secrets.env" >&2
   exit 1
 fi
 

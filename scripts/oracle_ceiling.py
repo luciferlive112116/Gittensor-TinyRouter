@@ -22,7 +22,7 @@ Three modes:
 
 Design contract: the analysis math (this module's pure functions) has NO network and
 NO torch/GPU dependency, so it is unit-testable on the dev box. Only --collect touches
-the network, and it reuses FireworksPool (retry/concurrency/cost-ledger) + reward.score_text
+the network, and it reuses OpenRouterPool (retry/concurrency/cost-ledger) + reward.score_text
 (the FIXED grader) — it does NOT reinvent extraction.
 """
 from __future__ import annotations
@@ -531,7 +531,7 @@ def _verdict(report: dict) -> dict:
 
 
 # =============================================================================
-# Live collection (--collect). Reuses FireworksPool + reward.score_text.
+# Live collection (--collect). Reuses OpenRouterPool + reward.score_text.
 # =============================================================================
 @dataclass
 class _CostMeter:
@@ -550,11 +550,11 @@ class _CostMeter:
         self.calls += 1
 
 
-# Fireworks prices from the most recent commit (b51d775): $/1M (in, out).
+# OpenRouter list prices for the default pool: $/1M (in, out).
 _DEFAULT_PRICES = {
-    "deepseek-v4-pro": (1.74, 3.48),
-    "glm-5p2": (1.40, 4.40),
-    "kimi-k2p6": (0.95, 4.00),
+    "qwen3.5-35b-a3b": (0.14, 1.00),
+    "minimax-m3": (0.30, 1.20),
+    "deepseek-v4-flash": (0.09, 0.18),
 }
 
 
@@ -567,7 +567,7 @@ async def _collect(args) -> int:
     """
     import httpx
 
-    from trinity.llm.fireworks_client import FireworksPool
+    from trinity.llm.openrouter_client import OpenRouterPool
     from trinity.orchestration import reward as R
     from trinity.orchestration.dataset import load_tasks
     from trinity.roles.prompts import build_messages
@@ -581,7 +581,7 @@ async def _collect(args) -> int:
     raw_path = out_dir / f"oracle_raw_{args.benchmark}{suffix}.jsonl"
     matrix_path = out_dir / f"oracle_matrix_{args.benchmark}{suffix}.json"
 
-    pool = FireworksPool(args.models)
+    pool = OpenRouterPool(args.models)
     models = list(pool.models)
     tasks = load_tasks(args.benchmark, args.split, max_items=args.max_items, seed=args.seed)
     print(f"[collect] benchmark={args.benchmark} level={args.level} K={args.k} "
