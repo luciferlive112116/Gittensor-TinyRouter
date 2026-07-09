@@ -4,7 +4,7 @@ This is provider/torch-agnostic glue. It takes:
   - a `policy` object exposing `decide(transcript_text, *, sample, rng) -> (agent_idx, Role)`
     (the real one is trinity.coordinator.policy.CoordinatorPolicy; tests pass a mock),
   - an async `pool` exposing `chat(model, messages, *, temperature, top_p, max_tokens)
-    -> ChatResult` (trinity.llm.fireworks_client.FireworksPool; tests pass a stub),
+    -> ChatResult` (trinity.llm.openrouter_client.OpenRouterPool; tests pass a stub),
 so the whole loop can be exercised end-to-end with zero GPU and zero network (S4).
 
 See docs/SPEC.md §2 (data-flow) and §4 (protocol). Termination rule:

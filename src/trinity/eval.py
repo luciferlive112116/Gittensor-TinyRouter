@@ -24,7 +24,7 @@ import yaml
 
 from .coordinator import params as P
 from .coordinator.policy import CoordinatorPolicy
-from .llm.fireworks_client import FireworksPool
+from .llm.openrouter_client import OpenRouterPool
 from .orchestration import reward as R
 from .orchestration.dataset import load_tasks
 from .orchestration.session import run_trajectory
@@ -80,7 +80,7 @@ async def _score_single_model(tasks, pool, model, benchmark, *, max_tokens, reas
 
 
 async def evaluate(args) -> dict:
-    pool = FireworksPool(args.models)
+    pool = OpenRouterPool(args.models)
     pool_models = list(pool.models)
     n_models = len(pool_models)
 

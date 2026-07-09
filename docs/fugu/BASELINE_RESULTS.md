@@ -13,7 +13,7 @@ the shared FIXED grader. No GRPO, no GPU.
   identical set and order).
 - Conductor: `deepseek-v4-pro`, `reasoning="none"`, `max_depth=0` (no recursion),
   `reps=1`.
-- Workers: `deepseek-v4-pro` / `glm-5p2` / `kimi-k2p6` via Fireworks.
+- Workers: `qwen3.5-35b-a3b` / `minimax-m3` / `deepseek-v4-flash` via OpenRouter.
 - Command: `scripts/fugu_baseline_eval.py` (cost-capped at $5).
 
 ## Result

@@ -40,7 +40,7 @@ def _estimate_cost() -> float:
     try:
         import hashlib
         total = 0.0
-        pricing = {"deepseek-v4-pro": 0.90, "glm-5p2": 0.90, "kimi-k2p6": 0.90}
+        pricing = {"qwen3.5-35b-a3b": 0.90, "minimax-m3": 0.90, "deepseek-v4-flash": 0.90}
         prev_hash = ""
         with open(ledger_path) as f:
             for line in f:
@@ -72,7 +72,7 @@ def build_receipt(run_dir: Path, benchmark: str) -> dict:
 
     return {
         "benchmark": benchmark,
-        "pool_models": summary.get("pool", ["deepseek-v4-pro", "glm-5p2", "kimi-k2p6"]),
+        "pool_models": summary.get("pool", ["qwen3.5-35b-a3b", "minimax-m3", "deepseek-v4-flash"]),
         "n_total": summary.get("n_total", 13312),
         "popsize": summary.get("popsize", 33),
         "m_cma": summary.get("m_cma", 16),

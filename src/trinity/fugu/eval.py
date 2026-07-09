@@ -52,7 +52,7 @@ async def evaluate(
     """Evaluate ``conductor`` on ``tasks`` with ``reps`` samples each.
 
     Uses sampling when ``reps > 1`` (so the reps are independent draws), greedy
-    otherwise. Tasks run with bounded ``concurrency`` (the Fireworks pool's own
+    otherwise. Tasks run with bounded ``concurrency`` (the pool client's own
     semaphore still caps in-flight calls). Respects a spend ``cap_usd`` (0
     disables it): once the running spend crosses the cap, no NEW task is started
     and the result is returned with ``aborted=True`` and only the tasks finished

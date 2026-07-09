@@ -49,18 +49,18 @@ wins for implementation detail; this file owns the *intent*.
 
 ---
 
-## 2. The model pool (open-source, via Fireworks)
+## 2. The model pool (open-source, via OpenRouter)
 
-The three coordinated LLMs are served through the **Fireworks AI** OpenAI-compatible API:
+The three coordinated LLMs are served through the **OpenRouter** OpenAI-compatible API:
 
-| Slot | Fireworks model ID                               | Short name      |
-| ---- | ------------------------------------------------ | --------------- |
-| A    | `accounts/fireworks/models/deepseek-v4-pro`      | `deepseek-v4-pro` |
-| B    | `accounts/fireworks/models/glm-5p2`              | `glm-5p2`       |
-| C    | `accounts/fireworks/models/kimi-k2p6`            | `kimi-k2p6`     |
+| Slot | OpenRouter model slug        | Short name          |
+| ---- | ---------------------------- | ------------------- |
+| A    | `qwen/qwen3.5-35b-a3b`       | `qwen3.5-35b-a3b`   |
+| B    | `minimax/minimax-m3`         | `minimax-m3`        |
+| C    | `deepseek/deepseek-v4-flash` | `deepseek-v4-flash` |
 
 All three were confirmed reachable with the project API key. The compact ~0.6B coordinator
-encoder runs **locally on our own GPU** (see below), not on Fireworks.
+encoder runs **locally on our own GPU** (see below), not on OpenRouter.
 
 ---
 
@@ -72,7 +72,7 @@ encoder runs **locally on our own GPU** (see below), not on Fireworks.
     `CUDA_VISIBLE_DEVICES=5`. Do not run anything on GPUs 0–4 or 6+. The helper scripts in
     `scripts/` enforce this; if you bypass them, set the variable yourself.
 - **Local box:** orchestration, code, git. The 0.6B encoder + CMA-ES loop are meant to run on
-  the remote H200; LLM calls go out to Fireworks over HTTP.
+  the remote H200; LLM calls go out to OpenRouter over HTTP.
 
 ---
 
@@ -83,8 +83,8 @@ if it were public.
 
 - The **SSH private key** lives at `~/.ssh/trinity_gpu` (perms `600`), referenced only by the
   `trinity-gpu` host alias in `~/.ssh/config`. It is never copied into the project tree.
-- The **Fireworks API key** lives at `~/.config/trinity/secrets.env` (perms `600`), outside the
-  repo. Code reads it from the `FIREWORKS_API_KEY` environment variable.
+- The **OpenRouter API key** lives at `~/.config/trinity/secrets.env` (perms `600`), outside the
+  repo. Code reads it from the `OPENROUTER_API_KEY` environment variable.
 - Before running anything: `source ~/.config/trinity/secrets.env`.
 - `.gitignore` blocks `.env`, `*.key`, `*.pem`, `*trinity_gpu*`, `secrets.env`, `*token*`, etc.
   as defense-in-depth. **Run `git diff --cached` before every commit** and abort if any secret
@@ -106,7 +106,7 @@ trinity/
 │   └── paper/             # local paper text (gitignored)
 ├── configs/               # models.yaml, trinity.yaml, benchmarks.yaml
 ├── src/trinity/
-│   ├── llm/               # Fireworks client + model-pool abstraction
+│   ├── llm/               # OpenRouter client + model-pool abstraction
 │   ├── coordinator/       # 0.6B encoder, hidden-state extraction, ~10K head, policy
 │   ├── roles/             # Thinker / Worker / Verifier prompt templates
 │   ├── orchestration/     # multi-turn coordination session loop
@@ -130,7 +130,7 @@ we learned is as valuable as the code. **`docs/JOURNAL.md` is the lab notebook.*
 **Rules:**
 
 1. **Log every mistake.** When something fails — a wrong assumption about the paper, a bug, a
-   misread hyperparameter, a Fireworks/SSH/GPU gotcha, a CMA-ES divergence — add a dated entry
+   misread hyperparameter, an OpenRouter/SSH/GPU gotcha, a CMA-ES divergence — add a dated entry
    to `docs/JOURNAL.md` describing: what you expected, what happened, the root cause, and the
    fix. Do not silently fix and move on.
 2. **Log every finding.** Reproduced numbers, surprising ablation results, prompt tweaks that
@@ -154,8 +154,8 @@ the work — not as an afterthought.
 # 0. load secrets (never committed)
 source ~/.config/trinity/secrets.env
 
-# 1. sanity: confirm the three Fireworks models answer
-python -m trinity.llm.fireworks_client --selftest
+# 1. sanity: confirm the three OpenRouter models answer
+python -m trinity.llm.openrouter_client --selftest
 
 # 2. remote GPU env (pins CUDA_VISIBLE_DEVICES=5)
 bash scripts/setup_remote.sh

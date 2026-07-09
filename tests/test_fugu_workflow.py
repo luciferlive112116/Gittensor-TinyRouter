@@ -14,7 +14,7 @@ from trinity.fugu.workflow import (
 from trinity.fugu.reward import is_correct, training_reward
 from trinity.types import Task
 
-POOL = ["deepseek-v4-pro", "glm-5p2", "kimi-k2p6"]
+POOL = ["qwen3.5-35b-a3b", "minimax-m3", "deepseek-v4-flash"]
 
 WF_OK = """
 model_id = [0, 1]
@@ -133,8 +133,8 @@ def test_run_workflow_executes_and_grades():
     assert run.parsed_ok and is_correct(run, _task()) == 1
     assert pool.calls == 2 and run.n_llm_calls == 2
     # exact per-model token accounting: two distinct workers, each one call.
-    assert run.model_tokens["deepseek-v4-pro"] == (10, 5)
-    assert run.model_tokens["glm-5p2"] == (10, 5)
+    assert run.model_tokens["qwen3.5-35b-a3b"] == (10, 5)
+    assert run.model_tokens["minimax-m3"] == (10, 5)
     assert run.completion_tokens == 10
 
 

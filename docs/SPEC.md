@@ -1,7 +1,7 @@
 # TRINITY Replication — Canonical Implementation Spec (SPEC.md)
 
 > Generated from a multi-agent deep read of the paper, then corrected by an adversarial
-> review and grounded against the real Qwen3-0.6B config and a live Fireworks probe.
+> review and grounded against the real Qwen3-0.6B config and a live OpenRouter probe.
 >
 > **Section 0 below is authoritative.** Where any number later in this document disagrees
 > with Section 0, Section 0 wins (it folds in the review corrections + verified facts).
@@ -20,9 +20,8 @@
   `q_proj 1024×2048→1024`, `k_proj 1024×1024→1024`, `v_proj 1024×1024→1024`,
   `o_proj 2048×1024→1024`, `gate_proj 1024×3072→1024`, `up_proj 1024×3072→1024`,
   `down_proj 3072×1024→1024`. **All 7 matrices give 1024 SVs each.**
-- **Fireworks pool verified LIVE (HTTP 200, real completions):** `deepseek-v4-pro`, `glm-5p2`,
-  `kimi-k2p6` all exist and answer. (The review flagged these as possibly fabricated IDs — that
-  concern is resolved by the live probe; they are real serverless models on our account.)
+- **OpenRouter pool verified LIVE (HTTP 200, real completions):** `qwen3.5-35b-a3b`,
+  `minimax-m3`, `deepseek-v4-flash` all exist and answer.
 - **Remote box:** 8× H200 NVL (143 GB), GPU **index 5 only**, /mnt/data 3.2 TB free.
 
 ### 0.2 Corrected numbers (the review caught arithmetic errors below)
@@ -77,7 +76,7 @@ improving, the first thing to re-examine is the separability assumption on our p
 
 # TRINITY Replication — Canonical Implementation Spec (SPEC.md)
 
-> Re-implementation of **TRINITY: An Evolved LLM Coordinator** (ICLR 2026, arXiv:2512.04695v3) for OUR setting: a **3-model Fireworks pool** coordinated by a **local Qwen3-0.6B** SLM, trained with **sep-CMA-ES** on a **single H200 (GPU index 5, ~143 GB)**.
+> Re-implementation of **TRINITY: An Evolved LLM Coordinator** (ICLR 2026, arXiv:2512.04695v3) for OUR setting: a **3-model OpenRouter pool** coordinated by a **local Qwen3-0.6B** SLM, trained with **sep-CMA-ES** on a **single H200 (GPU index 5, ~143 GB)**.
 >
 > Source paper: `/home/cybernovas/Desktop/2026/experiments/trinity/docs/paper/trinity_paper.txt`.
 > Every paper-quoted number is preserved. Where the paper is silent, a default is proposed and tagged **[OUR CHOICE]**. Where OUR setting deviates by design (pool size), it is tagged **[REPLICATION DELTA]**.
@@ -91,7 +90,7 @@ A tiny (**< 20K trainable params**) coordinator that, at each of up to **K=5** t
 
 ### 1.2 OUR setup (fixed)
 - **Coordinator SLM:** Qwen3-0.6B, run **locally on H200 GPU5**. Hidden dim `d_h = 1024`.
-- **Coordinated pool (L = 3) [REPLICATION DELTA]:** Fireworks-served `deepseek-v4-pro`, `glm-5p2`, `kimi-k2p6`. (Paper used L=7: GPT-5, Gemini-2.5-pro, Claude-Sonnet-4-20250514, Gemma-3-27B-It, DeepSeek-R1-Distill-Qwen-32B, Qwen3-32B reasoning, Qwen3-32B direct.)
+- **Coordinated pool (L = 3) [REPLICATION DELTA]:** OpenRouter-served `qwen3.5-35b-a3b`, `minimax-m3`, `deepseek-v4-flash`. (Paper used L=7: GPT-5, Gemini-2.5-pro, Claude-Sonnet-4-20250514, Gemma-3-27B-It, DeepSeek-R1-Distill-Qwen-32B, Qwen3-32B reasoning, Qwen3-32B direct.)
 - **Head output `n_a = L + 3 = 6`** logits (3 agent + 3 role). Linear head = `6 × 1024 = 6,144` params (paper: 10,240 at L=7).
 - **Roles:** Thinker (T), Worker (W), Verifier (V).
 
@@ -161,7 +160,7 @@ Two nested loops:
    │           MESSAGE-PROCESSING MODULE: inject role-specific prompt(R_k,C)  │
    │                               │                                          │
    │                               ▼                                          │
-   │             Fireworks LLM A_k .generate(prompt, max_tokens=4096)  → M_k  │
+   │             OpenRouter LLM A_k .generate(prompt, max_tokens=4096) → M_k   │
    │                               │                                          │
    │                               ▼                                          │
    │             post-process M_k → O_k ; C_k = C_{k-1} ∪ {O_k}               │
@@ -359,7 +358,7 @@ AIME2025, BigCodeBench, MT-Bench(-101), GPQA-Diamond. Same K=5 / 4096-token sett
 
 ### 6.4 Seeds & decoding
 - **[OUR CHOICE] 3 eval seeds** (matches paper's only stated seed count), report mean ± std.
-- **[OUR CHOICE] Decoding for pool LLMs:** temperature **0.0** (greedy) for deterministic correctness scoring on math/code; `top_p=1.0`. "Minimal reasoning effort" → set each Fireworks model's reasoning/thinking budget to its lowest documented setting. Document the exact per-model mapping.
+- **[OUR CHOICE] Decoding for pool LLMs:** temperature **0.0** (greedy) for deterministic correctness scoring on math/code; `top_p=1.0`. "Minimal reasoning effort" → set each OpenRouter model's reasoning/thinking budget to its lowest documented setting. Document the exact per-model mapping.
 
 ### 6.5 Full-power LiveCodeBench
 After training, **lift the 4096-token cap, no retraining** (R6). Paper's pool narrowed to 3 closed models; OUR pool is already 3 models, so simply remove the cap and re-eval.
@@ -395,8 +394,8 @@ We do **not** target absolute numbers. We target the **R1–R13 invariants** (Se
 ## 8. Module-by-Module Build Plan (`src/trinity/...`)
 
 ### `src/trinity/llm`
-- `pool.py`: registry of the 3 Fireworks models (`deepseek-v4-pro`, `glm-5p2`, `kimi-k2p6`) with agent IDs A0/A1/A2.
-- `client.py`: async Fireworks chat client; `generate(prompt, max_tokens=4096, temperature=0.0, reasoning="minimal")`. Retry/backoff. **[OUR CHOICE]** optional disk response cache keyed by (model, prompt-hash, decode-params) — paper never mentions caching; add it to cut atomic-eval cost since training repeats instances.
+- `pool.py`: registry of the 3 OpenRouter models (`qwen3.5-35b-a3b`, `minimax-m3`, `deepseek-v4-flash`) with agent IDs A0/A1/A2.
+- `client.py`: async OpenRouter chat client; `generate(prompt, max_tokens=4096, temperature=0.0, reasoning="minimal")`. Retry/backoff. **[OUR CHOICE]** optional disk response cache keyed by (model, prompt-hash, decode-params) — paper never mentions caching; add it to cut atomic-eval cost since training repeats instances.
 - Maps "minimal reasoning effort" to each provider's knob.
 
 ### `src/trinity/coordinator`
@@ -483,7 +482,7 @@ We do **not** target absolute numbers. We target the **R1–R13 invariants** (Se
 | 9 | **CMA `σ_0`, `μ`, weights, `m_0`** | σ0=0.1, μ=17, default log-weights, m_0=(W=0, SVF=1.0) |
 | 10 | **Per-task `B_env` / iterations** | T≈60 (B_env≈34,560) for all tasks; tune per-task if budget-bound |
 | 11 | **Replication minibatch construction** | 16 distinct random instances per candidate, re-sampled each iteration |
-| 12 | **Decode temp/top_p, "minimal reasoning"** | temp 0.0, top_p 1.0, lowest reasoning budget per Fireworks model |
+| 12 | **Decode temp/top_p, "minimal reasoning"** | temp 0.0, top_p 1.0, lowest reasoning budget per OpenRouter model |
 | 13 | **MT-Bench judge & rubric** | Strongest pool model as judge, 10-point; keep separate from accuracy avgs |
 | 14 | **MATH500/MMLU/RLPR split sizes** | Official splits; else 80/20 with seed 0; record actual sizes |
 | 15 | **Eval seed count** | 3 seeds, report mean±std |
@@ -506,7 +505,7 @@ CMA run is justified only after S8 returns a finite fitness. (From the adversari
 | **S3** | `unpack(pack(W, svf_scales)) == (W, svf_scales)`; assert `len(θ) == 6144 + actual_svf_count` and that this equals the `n` fed to CMA. | θ layout integrity. | trivial |
 | **S4** | Mock the LLM: stub Worker text + a Verifier emitting `VERDICT: ACCEPT`. Run `trinity_run(Q, θ_random)`: assert K≤5, transcript grows, ACCEPT terminates (only after a Worker exists — §0.3.5), returns `O_τ`. Then a no-VERDICT verifier → fail-safe REVISE → runs to K. | Inner loop, termination rule, verifier parser. | $0 |
 | **S5** | Feed each `reward.py` checker one known-correct + one known-wrong case (math boxed answer, code pass@1 on a 2-test toy, MMLU letter). Assert {1,0}. | Reward signal correctness (where silent failures hide). | $0 |
-| **S6** | One live call to each of the 3 Fireworks models: "minimal reasoning" param accepted, `max_tokens` honored, cache write/read works. | Pool IDs + decode params + cache. | 3 calls |
+| **S6** | One live call to each of the 3 OpenRouter models: "minimal reasoning" param accepted, `max_tokens` honored, cache write/read works. | Pool IDs + decode params + cache. | 3 calls |
 | **S7** | Run sep-CMA-ES at the **real** `n` on a synthetic deterministic fitness (`−‖θ−θ*‖²`) for ~10 iters; assert `J` increases monotonically and λ == configured (33). | Optimizer loop, recombination, logging. | CPU |
 | **S8** | Real SLM + real LLM + real reward, `m_CMA=2`, `λ=1`, `T=1`. Assert finite fitness ∈ [0,1] logged and API calls ≤ `2×5`. | End-to-end integration proof. | ~10 calls |
 
