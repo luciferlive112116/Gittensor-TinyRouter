@@ -22,7 +22,7 @@ import yaml
 
 from .coordinator import params as P
 from .coordinator.policy import CoordinatorPolicy
-from .llm.fireworks_client import FireworksPool
+from .llm.openrouter_client import OpenRouterPool
 from .optim.fitness import FitnessConfig, evaluate_population
 from .optim.sep_cmaes import SepCMAES, default_popsize
 from .orchestration.dataset import load_tasks, sample_minibatch
@@ -67,7 +67,7 @@ async def train(args) -> dict:
     if fitness_cfg.enable_reweight or fitness_cfg.shaping_active:
         print(f"[train] fitness shaping ACTIVE: {fitness_cfg}")
 
-    pool = FireworksPool(args.models)
+    pool = OpenRouterPool(args.models)
     pool_models = list(pool.models)
     n_models = len(pool_models)
 

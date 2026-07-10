@@ -163,8 +163,8 @@ async def build_benchmark(benchmark: str, output_dir: str, password: str) -> str
     print(f"  Live:  {len(live_items)} questions")
 
     # Cache answers for eval and audit (NOT live)
-    from trinity.llm.fireworks_client import FireworksPool
-    pool = FireworksPool(str(_REPO / "configs" / "models.yaml"))
+    from trinity.llm.openrouter_client import OpenRouterPool
+    pool = OpenRouterPool(str(_REPO / "configs" / "models.yaml"))
     pool_models = list(pool.models.keys())
 
     all_cacheable = eval_items + audit_items

@@ -12,7 +12,7 @@ group size and the iteration count). This module makes that cost first-class:
 * :func:`estimate_grpo_cost` / :func:`estimate_eval_cost` PROJECT the spend of a
   run before it starts, so a paid GRPO job is never launched blind.
 
-Prices match ``scripts/oracle_ceiling.py`` (Fireworks $/1M tokens, in/out). The
+Prices match ``scripts/oracle_ceiling.py`` (OpenRouter $/1M tokens, in/out). The
 runtime ground truth remains the shared cost ledger (set ``TRINITY_COST_LEDGER``
 and run ``scripts/cost_report.py``); these functions agree with it and add a
 pre-run estimate the ledger cannot give.
@@ -32,12 +32,12 @@ __all__ = [
     "estimate_eval_cost",
 ]
 
-# Fireworks prices, $/1M tokens (prompt, completion). Keep in sync with
+# OpenRouter prices, $/1M tokens (prompt, completion). Keep in sync with
 # scripts/oracle_ceiling.py::_DEFAULT_PRICES.
 PRICES: dict[str, tuple[float, float]] = {
-    "deepseek-v4-pro": (1.74, 3.48),
-    "glm-5p2": (1.40, 4.40),
-    "kimi-k2p6": (0.95, 4.00),
+    "qwen3.5-35b-a3b": (0.14, 1.00),
+    "minimax-m3": (0.30, 1.20),
+    "deepseek-v4-flash": (0.09, 0.18),
 }
 
 
@@ -51,7 +51,7 @@ def price_table(
 
     The Conductor is normally a model WE serve on our own H200 (a GRPO-trained
     HF checkpoint), so its per-token API cost is 0 and only GPU time applies; set
-    ``conductor_local=True`` (default). When the Conductor is instead a Fireworks
+    ``conductor_local=True`` (default). When the Conductor is instead an OpenRouter
     model (the prompted baseline), pass ``conductor_local=False`` and its name so
     its generation is priced.
     """

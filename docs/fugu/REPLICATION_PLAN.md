@@ -2,8 +2,8 @@
 
 Branch: `openfugu-replication`. Goal: replicate OpenFugu (trotsky1997/OpenFugu),
 that is, add the **Conductor / Fugu-Ultra** orchestration tier that TinyRouter
-lacks, over the existing open-source Fireworks pool (`deepseek-v4-pro`,
-`glm-5p2`, `kimi-k2p6`), with cost tracked and false positives/negatives guarded.
+lacks, over the current OpenRouter-backed pool (`qwen3.5-35b-a3b`,
+`minimax-m3`, `deepseek-v4-flash`), with cost tracked and false positives/negatives guarded.
 
 Research basis: [`FUGU_REPLICATION_RESEARCH.md`](./FUGU_REPLICATION_RESEARCH.md),
 sources in [`REFERENCE_INDEX.md`](./REFERENCE_INDEX.md).
@@ -48,7 +48,7 @@ src/trinity/fugu/
                 multi-step FP/FN-recovery pick). All correctness via the shared
                 trinity.orchestration.reward.score_text (the FIXED grader).
   conductor.py  Conductor protocol; PromptedConductor (zero-training baseline
-                over a Fireworks model); StubConductor (offline tests). The
+                over an OpenRouter model); StubConductor (offline tests). The
                 trained HF policy implements the same protocol.
   hf_backend.py HFPolicyBackend: a local transformers CausalLM Conductor that
                 samples workflows and applies the no-KL GRPO update directly in
@@ -62,7 +62,7 @@ src/trinity/fugu/
                 oracle-ceiling diagnostic) + cost.
 ```
 
-Reused unchanged: `llm/fireworks_client` (pool + cost ledger), `roles/postprocess`,
+Reused unchanged in spirit: `llm/openrouter_client` (pool + cost ledger), `roles/postprocess`,
 `orchestration/reward` (the grader), `types`, and `scripts/oracle_ceiling.py`
 (the FP/FN-proof ceiling + bootstrap CIs).
 
@@ -97,7 +97,7 @@ Every worker and conductor call already lands in the shared cost ledger (set
   silently overspend.
 * `cost.estimate_grpo_cost` / `estimate_eval_cost` project spend BEFORE a run.
 
-Projected Fireworks API spend (conductor served locally on the H200, so only
+Projected OpenRouter API spend (conductor served locally on the H200, so only
 worker calls cost API money; assumes ~2.5 steps/workflow, ~1.2k prompt + ~0.8k
 completion tokens/worker call):
 
@@ -132,7 +132,7 @@ The trainable `PolicyBackend` now exists. Recipe:
 4. Evaluate with `fugu.eval.evaluate(reps=3)`, then feed `per_query_binary` to
    `scripts/oracle_ceiling.py` for the honest ceiling and CI verdict.
 
-Free CUDA/backend smoke (no Fireworks calls):
+Free CUDA/backend smoke (no hosted-model calls):
 
 ```bash
 CUDA_VISIBLE_DEVICES=3 PYTHONPATH=src .venv/bin/python scripts/fugu_grpo_train.py \
@@ -142,10 +142,10 @@ CUDA_VISIBLE_DEVICES=3 PYTHONPATH=src .venv/bin/python scripts/fugu_grpo_train.p
 ```
 
 The verified 2026-06-25 smoke (`summary_gpu3_stub_group32.json`) loaded
-Qwen3-0.6B on GPU 3, made no Fireworks calls, reported `spend_usd: 0.0`, and
+Qwen3-0.6B on GPU 3, made no hosted-model calls, reported `spend_usd: 0.0`, and
 exercised a nonzero GRPO update over 32 samples.
 
-Paid Phase 0 smoke (Fireworks workers, cost-capped):
+Paid Phase 0 smoke (OpenRouter workers, cost-capped):
 
 ```bash
 source ~/.config/trinity/secrets.env

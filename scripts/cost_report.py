@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""TRINITY Fireworks cost tracker.
+"""TRINITY OpenRouter cost tracker.
 
 Two modes:
-  --ledger PATH   Exact: sum token usage recorded by FireworksPool (set
+  --ledger PATH   Exact: sum token usage recorded by OpenRouterPool (set
                   TRINITY_COST_LEDGER=PATH when running train/eval).
   --estimate      Approximate: estimate calls/tokens/cost from run configs, for runs
                   that happened BEFORE the ledger existed (the early pilots + the
                   currently in-flight parallel runs).
 
-Fireworks has no usable billing API for this key (we probed: /v1/usage 404,
-/v1/accounts/usage 403). But every chat response carries exact token counts, so we
-price from tokens. PRICES below are ASSUMPTIONS — replace with the real per-model
-Fireworks rates to get exact dollars; pass --in/--out to override the blended rate.
+OpenRouter exposes exact token usage in every chat response, so we price from
+tokens. PRICES below should track the repo's current default model pool; pass
+--in/--out to override the blended rate for what-if estimates.
 
     python scripts/cost_report.py --estimate
     TRINITY_COST_LEDGER=~/trinity/cost_ledger.jsonl python -m trinity.train ...
@@ -24,16 +23,11 @@ import hashlib
 import json
 import sys
 
-# ---- Fireworks serverless prices ($ per 1M tokens), (input, output). ----
-# Real rates from Fireworks pricing (web search, June 2026):
-#   deepseek-v4-pro $1.74 in / $3.48 out ($0.145 cached in)
-#   kimi-k2p6 (K2.6) $0.95 in / $4.00 out ($0.16 cached in)
-#   glm-5p2: GLM 5.1 listed at $1.40 / $4.40 — used as proxy for GLM 5.2 (5.2 not separately listed).
-# Cached input tokens get ~50% off; we ignore caching here (slight over-estimate).
+# ---- OpenRouter prices ($ per 1M tokens), (input, output). ----
 PRICES = {
-    "deepseek-v4-pro": (1.74, 3.48),
-    "glm-5p2":         (1.40, 4.40),
-    "kimi-k2p6":       (0.95, 4.00),
+    "qwen3.5-35b-a3b": (0.14, 1.00),
+    "minimax-m3":      (0.30, 1.20),
+    "deepseek-v4-flash": (0.09, 0.18),
 }
 _DEFAULT_BLENDED_IN = sum(p[0] for p in PRICES.values()) / len(PRICES)
 _DEFAULT_BLENDED_OUT = sum(p[1] for p in PRICES.values()) / len(PRICES)
@@ -72,7 +66,7 @@ def verify_ledger_chain(path: str) -> tuple[bool, int, str]:
             if expected_h is None:
                 return False, entries, (
                     f"line {lineno}: missing hash field 'h' "
-                    f"(ledger entries must be written by FireworksPool with hash-chain enabled)"
+                    f"(ledger entries must be written by OpenRouterPool with hash-chain enabled)"
                 )
             if computed_h != expected_h:
                 return False, entries, (
@@ -165,8 +159,8 @@ def report_estimate(in_rate: float, out_rate: float, avg_turn_frac: float = 0.7,
         print(f"{name:22s} {calls:7.0f} {tok:7.2f} {d:8.2f}  {status}")
     print("-" * 60)
     print(f"{'TOTAL (when all finish)':22s} {grand_calls:7.0f} {grand_tok:7.2f} ${grand_cost:8.2f}")
-    print("\nNOTE: real Fireworks rates (web, Jun 2026); glm-5p2 uses GLM-5.1 as proxy. Token/turn "
-          "counts are estimated (in-flight runs predate the ledger); caching discount ignored.")
+    print("\nNOTE: prices should match the current OpenRouter default pool. Token/turn counts are "
+          "estimated for pre-ledger runs and ignore prompt-caching discounts.")
 
 
 def main() -> None:

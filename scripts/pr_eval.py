@@ -44,7 +44,7 @@ _OVERFIT_HARD_REJECT = 0.10      # eval-audit gap above this = reject
 _OVERFIT_PENALTY = 0.05          # gap above this = 0.85 penalty
 _RATE_LIMIT_WINDOW_DAYS = 7
 _RATE_LIMIT_MAX_SUBMISSIONS = 1
-_POOL_MODELS = ["deepseek-v4-pro", "glm-5p2", "kimi-k2p6"]
+_POOL_MODELS = ["qwen3.5-35b-a3b", "minimax-m3", "deepseek-v4-flash"]
 
 
 # ==========================================================================
@@ -384,7 +384,7 @@ async def _evaluate_live(
 ) -> Tuple[float, float]:
     """Run full multi-turn eval with real API calls. Returns (accuracy, avg_turns)."""
     import httpx
-    from trinity.orchestration.reward import score_text
+    from trinity.orchestration.reward import score
     from trinity.orchestration.session import run_trajectory
     from trinity.types import Task
 
@@ -413,7 +413,7 @@ async def _evaluate_live(
             total_turns += max_turns
             continue
         traj = result
-        if score_text(tasks[i].benchmark, traj.final_answer, tasks[i].answer) > 0.0:
+        if score(traj) > 0.0:
             correct += 1
         total_turns += traj.n_turns
 
@@ -619,7 +619,7 @@ async def evaluate_pr(pr_number: int, benchmark: str,
           f"{len(audit_items)} audit + {len(live_items)} live questions")
 
     from trinity.coordinator.policy import CoordinatorPolicy
-    from trinity.llm.fireworks_client import FireworksPool
+    from trinity.llm.openrouter_client import OpenRouterPool
 
     cfg = yaml.safe_load((_REPO / "configs" / "trinity.yaml").read_text())
     cc = cfg["coordinator"]
@@ -666,7 +666,7 @@ async def evaluate_pr(pr_number: int, benchmark: str,
 
     # ---- Live eval ----
     print("[pr_eval] Running live multi-turn eval (20 questions, real API calls)...")
-    pool = FireworksPool(str(_REPO / "configs" / "models.yaml"))
+    pool = OpenRouterPool(str(_REPO / "configs" / "models.yaml"))
     policy.configure(np.concatenate([
         np.asarray(head_W, dtype=np.float64).ravel(),
         np.asarray(svf_scales, dtype=np.float64).ravel(),

@@ -21,14 +21,14 @@ on the maintainer's hidden benchmark.** This document explains how to compete.
 
 Train a routing head using the existing CMA-ES pipeline. You need:
 - A GPU (T4 or better) or CPU (slower)
-- A Fireworks API key (`FIREWORKS_API_KEY` env var)
+- An OpenRouter API key (`OPENROUTER_API_KEY` env var)
 - ~$25-65 in API credits for a full training run
 
 ```bash
 git clone https://github.com/<org>/tinyrouter.git
 cd tinyrouter
 pip install -e ".[dev]"
-source ~/.config/trinity/secrets.env   # exports FIREWORKS_API_KEY
+source ~/.config/trinity/secrets.env   # exports OPENROUTER_API_KEY
 
 # Train on math500
 CUDA_VISIBLE_DEVICES=0 python -m trinity.train \

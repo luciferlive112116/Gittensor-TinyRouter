@@ -33,7 +33,7 @@ class Task:
 @dataclass
 class TurnRecord:
     turn: int               # 1-indexed
-    agent_name: str         # pool model short name, e.g. "deepseek-v4-pro"
+    agent_name: str         # pool model short name, e.g. "deepseek-v4-flash"
     role: Role
     raw_output: str         # M_k (verbatim model output)
     processed_output: str   # O_k (post-processed, appended to transcript)

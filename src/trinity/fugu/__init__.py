@@ -22,8 +22,8 @@ Layout (mirrors ``openfugu/`` upstream):
 * :mod:`trinity.fugu.grpo`       framework-agnostic GRPO math (group-normalized
   advantages, no KL) and the rollout/loop skeleton.
 
-The worker pool is the existing open-source Fireworks trio: deepseek-v4-pro,
-glm-5p2, kimi-k2p6.
+The worker pool is the current OpenRouter-backed trio: qwen3.5-35b-a3b,
+minimax-m3, and deepseek-v4-flash.
 """
 from __future__ import annotations
 

@@ -30,7 +30,7 @@ class BaseTrainer(ABC):
     async def train(
         self,
         policy,           # CoordinatorPolicy
-        pool,             # FireworksPool (or any object with async chat)
+        pool,             # OpenRouterPool (or any object with async chat)
         tasks: List[Any],  # List[Task]
         **kwargs,
     ) -> Dict[str, Any]:

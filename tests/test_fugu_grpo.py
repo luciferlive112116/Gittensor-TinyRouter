@@ -15,7 +15,7 @@ from trinity.fugu.grpo import (
 )
 from trinity.types import Task
 
-POOL = ["deepseek-v4-pro", "glm-5p2", "kimi-k2p6"]
+POOL = ["qwen3.5-35b-a3b", "minimax-m3", "deepseek-v4-flash"]
 WF_OK = "model_id=[0,1]\nsubtasks=['solve','answer']\naccess_list=[[],[0]]"
 WF_BAD = "I cannot help with that."
 

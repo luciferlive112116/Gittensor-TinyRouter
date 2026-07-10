@@ -13,7 +13,7 @@ def _run(final, *, parsed=True, steps=None):
 
 
 def _step(out):
-    return StepResult(step=0, model_id=0, model_name="glm-5p2", subtask="", output=out)
+    return StepResult(step=0, model_id=0, model_name="minimax-m3", subtask="", output=out)
 
 
 MATH = Task(task_id="m", benchmark="math500", prompt="2+2", answer="4")
@@ -59,6 +59,21 @@ def test_no_false_positive_from_prose_letter():
     assert is_correct(run, MMLU) == 0
     # but an explicit answer line is graded correctly.
     assert is_correct(_run("A nice approach, but the answer is C."), MMLU) == 1
+
+
+def test_choice_takes_final_committed_answer_not_the_first():
+    # A self-correcting response commits to its LAST stated choice. The grader
+    # must read the committed answer, not the discarded first guess -- consistent
+    # with extract_boxed / verifier.parse_verdict, which also take the last match.
+    from trinity.orchestration import reward as R
+
+    assert R.extract_choice_letter(
+        "At first the answer is A. Wait, reconsidering, the answer is C."
+    ) == "C"
+    # End-to-end through the scorer: revised-to-correct is not a false negative,
+    assert R.score_text("mmlu", "The answer is B. Actually the answer is D.", "D") == 1.0
+    # and a revised-away first guess is not a false positive.
+    assert R.score_text("mmlu", "The answer is D. Actually the answer is B.", "D") == 0.0
 
 
 if __name__ == "__main__":

@@ -36,7 +36,7 @@ sys.path.insert(0, str(_REPO / "src"))
 
 from trinity.coordinator import params as P
 from trinity.coordinator.policy import CoordinatorPolicy
-from trinity.llm.fireworks_client import FireworksPool
+from trinity.llm.openrouter_client import OpenRouterPool
 from trinity.orchestration import reward as R
 from trinity.orchestration.dataset import load_tasks
 from trinity.orchestration.session import run_trajectory
@@ -54,7 +54,7 @@ _AUDIT_SPLIT: str = "train"  # We sample from train but with a DIFFERENT seed
 
 
 async def run_audit(args) -> dict:
-    pool = FireworksPool(args.models)
+    pool = OpenRouterPool(args.models)
     pool_models = list(pool.models)
     n_models = len(pool_models)
 

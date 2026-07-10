@@ -10,24 +10,24 @@ from trinity.fugu.cost import (
 )
 from trinity.fugu.workflow import CONDUCTOR_KEY, WorkflowRun
 
-POOL = ["deepseek-v4-pro", "glm-5p2", "kimi-k2p6"]
+POOL = ["qwen3.5-35b-a3b", "minimax-m3", "deepseek-v4-flash"]
 
 
 def test_run_cost_prices_exactly():
-    # glm-5p2 is $1.40/1M in, $4.40/1M out. 1M each -> $5.80.
-    total, bd = run_cost({"glm-5p2": (1_000_000, 1_000_000)})
-    assert abs(total - 5.80) < 1e-9
-    assert abs(bd["glm-5p2"] - 5.80) < 1e-9
+    # MiniMax M3 is $0.30/1M in, $1.20/1M out. 1M each -> $1.50.
+    total, bd = run_cost({"minimax-m3": (1_000_000, 1_000_000)})
+    assert abs(total - 1.50) < 1e-9
+    assert abs(bd["minimax-m3"] - 1.50) < 1e-9
 
 
 def test_conductor_is_free_when_local():
     table = price_table(conductor_local=True)
     total, _ = run_cost({CONDUCTOR_KEY: (1_000_000, 1_000_000)}, table)
     assert total == 0.0
-    # but priced when the conductor is a Fireworks model
-    table2 = price_table("kimi-k2p6", conductor_local=False)
+    # but priced when the conductor is an OpenRouter model
+    table2 = price_table("deepseek-v4-flash", conductor_local=False)
     total2, _ = run_cost({CONDUCTOR_KEY: (1_000_000, 0)}, table2)
-    assert abs(total2 - 0.95) < 1e-9
+    assert abs(total2 - 0.09) < 1e-9
 
 
 def test_cost_meter_accumulates_and_caps():
@@ -35,14 +35,16 @@ def test_cost_meter_accumulates_and_caps():
     run = WorkflowRun(
         workflow=None, parsed_ok=True, final_answer="x",
         n_llm_calls=2, prompt_tokens=1000, completion_tokens=1000,
-        model_tokens={"glm-5p2": (1000, 1000)},
+        model_tokens={"minimax-m3": (1000, 1000)},
     )
     c = meter.add_run(run)
     assert c > 0 and meter.runs == 1 and meter.calls == 2
-    # 1000 in + 1000 out on glm: ~0.0058 USD, over the 0.002 cap.
+    # 1000 in + 1000 out on MiniMax M3: ~0.0015 USD, below the cap.
+    assert meter.aborted is False
+    meter.add_run(run)
     assert meter.aborted is True
     rep = meter.report()
-    assert rep["per_model"]["glm-5p2"]["usd"] > 0
+    assert rep["per_model"]["minimax-m3"]["usd"] > 0
 
 
 def test_estimate_grpo_cost_projects_spend():
