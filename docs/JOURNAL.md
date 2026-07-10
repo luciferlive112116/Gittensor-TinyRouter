@@ -18,6 +18,25 @@ protocol. **Newest entries at the top.** Tag each entry with one or more of:
 
 ---
 
+## 2026-07-10 — Miners had no offline path to run pr_eval gates before opening a PR  #finding #decision
+**Context:** routing-head submissions were rejected only after opening a PR, when
+``scripts/pr_eval.py`` ran gates 1–4 embedded in an 850-line maintainer script.
+**Expected:** the same anti-cheat checks (rate limit, weights, duplicate head,
+receipt plausibility) runnable locally with no GPU and no OpenRouter spend.
+**Actual:** gate logic was not importable; miners discovered failures post-PR. A
+fifth gap also existed: ``receipt.json`` ``total_cost_usd`` was never
+cross-checked against a verified ``TRINITY_COST_LEDGER`` total, so fabricated
+receipts could disagree with the append-only ledger.
+**Fix / decision:** add ``trinity.submission`` (pack loader, gate classes,
+``PreflightRunner``) plus ``scripts/preflight_submission.py`` for miners.
+``pr_eval.py`` now imports the shared gates and runs gate 5
+(ledger/receipt cost consistency) before any GPU work. Shared OpenRouter pricing
+lives in ``trinity.llm.openrouter_pricing`` so ``cost_report.py``,
+``pack_submission.py``, and the new gate agree on dollar totals. Covered by
+``tests/test_submission_preflight.py``.
+**Follow-up:** wire the preflight CLI into CONTRIBUTING/SUBMITTING docs when the
+maintainer is ready to advertise it.
+
 ## 2026-07-10 — Cost-ledger verifier hashed a different JSON string than the writer  #mistake #decision
 **Context:** checking the token-cost ledger path used by training, `cost_report.py`,
 and submission packing.
