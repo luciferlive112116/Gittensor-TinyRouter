@@ -28,7 +28,7 @@ or driven manually through :meth:`ask` / :meth:`tell`.
 from __future__ import annotations
 
 import math
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
 
@@ -339,7 +339,7 @@ def run(
         maxiter=maxiter,
         lra=lra,
     )
-    history: list[dict] = []
+    history: list[dict[str, Any]] = []
 
     while not opt.stop():
         solutions = opt.ask()
@@ -349,7 +349,7 @@ def run(
         _, best_f = opt.best()
         gen_best = max(fitnesses)
         gen_mean = float(np.mean(fitnesses))
-        record = {
+        record: dict[str, Any] = {
             "iteration": opt.iteration,
             "best_fitness": best_f,
             "gen_best_fitness": gen_best,

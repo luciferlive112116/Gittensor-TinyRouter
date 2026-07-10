@@ -16,6 +16,7 @@ import json
 import random
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import yaml
@@ -116,7 +117,7 @@ async def train(args) -> dict:
 
     run_dir = _REPO / "experiments" / args.benchmark / args.run_name
     run_dir.mkdir(parents=True, exist_ok=True)
-    history: list[dict] = []
+    history: list[dict[str, Any]] = []
 
     run_kwargs = dict(
         max_turns=args.max_turns or sess.get("max_turns", 5),
@@ -152,7 +153,7 @@ async def train(args) -> dict:
         es.tell(thetas, fits)
 
         best_x, best_f = es.best()
-        rec = {
+        rec: dict[str, Any] = {
             "generation": gen,
             "gen_mean_fitness": float(np.mean(fits)),
             "gen_max_fitness": float(np.max(fits)),
