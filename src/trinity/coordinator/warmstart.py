@@ -26,6 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from . import params as P
+from .encoding import EncodingConfig
 
 __all__ = [
     "load_labels",
@@ -187,8 +188,17 @@ def pack_warmstart_theta(W_agent: np.ndarray, spec: P.ParamSpec) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # GPU encoding (torch; lazily imported, NOT touched by the numpy unit tests)
 # ---------------------------------------------------------------------------
-def encode_queries(prompts, *, model_name, device="cuda:0", dtype="bfloat16",
-                   target_layer=26, l2_normalize=True, instruction=None):
+def encode_queries(
+    prompts,
+    *,
+    model_name,
+    device="cuda:0",
+    dtype="bfloat16",
+    target_layer=26,
+    l2_normalize=True,
+    instruction=None,
+    encoding: EncodingConfig | None = None,
+):
     """Encode a list of query strings into ``(N, d_h)`` features with the frozen SLM.
 
     Imports torch + the CoordinatorEncoder lazily so this module stays import-clean
@@ -201,10 +211,21 @@ def encode_queries(prompts, *, model_name, device="cuda:0", dtype="bfloat16",
     """
     from .slm import CoordinatorEncoder  # lazy: pulls torch only when actually encoding
 
-    enc = CoordinatorEncoder(model_name=model_name, device=device, dtype=dtype,
-                             l2_normalize=l2_normalize)
+    # Legacy ``--instruction`` bypasses yaml config and applies a raw prefix once.
+    # Otherwise the encoder's ``EncodingConfig`` handles prefixing inside ``encode``.
+    use_legacy = instruction is not None
+    enc = CoordinatorEncoder(
+        model_name=model_name,
+        device=device,
+        dtype=dtype,
+        l2_normalize=l2_normalize,
+        encoding=None if use_legacy else encoding,
+    )
     feats = []
     for q in prompts:
-        text = (instruction + q) if instruction else q
+        if use_legacy:
+            text = (instruction + q) if instruction else q
+        else:
+            text = q
         feats.append(np.asarray(enc.encode(text), dtype=float).reshape(-1))
     return np.vstack(feats)

@@ -71,14 +71,26 @@ def _run_encode(args) -> int:
     from trinity.orchestration.dataset import load_tasks
 
     cfg = yaml.safe_load(Path(args.config).read_text())["coordinator"]
+    enc_cfg = None
+    from trinity.coordinator.encoding import EncodingConfig
+
     tasks = load_tasks(args.benchmark, args.split, max_items=args.max_items, seed=args.seed)
     prompts = [t.prompt for t in tasks]
     print(f"[encode] {len(prompts)} {args.benchmark}/{args.split} queries -> encoding on {args.device}")
+    if args.instruction:
+        instruction = args.instruction
+        enc_cfg = None
+    else:
+        instruction = None
+        enc_cfg = EncodingConfig.from_coord_dict(cfg)
+        if enc_cfg.active:
+            print(f"[encode] instruction prefix from config ({len(enc_cfg.prefix)} chars)")
     feats = _ws.encode_queries(
         prompts, model_name=cfg["encoder_model"], device=args.device,
         dtype=cfg.get("dtype", "bfloat16"), target_layer=cfg["svf"]["target_layer"],
         l2_normalize=cfg["hidden_state"].get("l2_normalize", True),
-        instruction=args.instruction or None,
+        instruction=instruction,
+        encoding=enc_cfg,
     )
     np.save(args.out_encodings, feats)
     # also dump the aligned ids for a sanity cross-check against the matrix

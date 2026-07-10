@@ -15,6 +15,7 @@ import numpy as np
 
 from ..types import Role
 from . import params as _params
+from .encoding import EncodingConfig
 
 
 class CoordinatorPolicy:
@@ -37,6 +38,7 @@ class CoordinatorPolicy:
         n_models: int = 3,
         n_roles: int = 3,
         l2_normalize: bool = True,
+        encoding: EncodingConfig | None = None,
     ) -> tuple["CoordinatorPolicy", _params.ParamSpec]:
         """Load Qwen3-0.6B on the GPU, wrap SVF, build the head, return (policy, spec).
 
@@ -48,7 +50,11 @@ class CoordinatorPolicy:
         from .svf import SVFAdapter
 
         encoder = CoordinatorEncoder(
-            model_name=model_name, device=device, dtype=dtype, l2_normalize=l2_normalize
+            model_name=model_name,
+            device=device,
+            dtype=dtype,
+            l2_normalize=l2_normalize,
+            encoding=encoding,
         )
         d_h = encoder.hidden_size
         assert d_h == 1024, f"expected d_h=1024, got {d_h}"

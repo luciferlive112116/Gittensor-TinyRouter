@@ -34,6 +34,8 @@ from typing import Any
 import numpy as np
 import yaml
 
+from .encoding import EncodingConfig, apply_instruction_prefix
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_CONFIG = _REPO_ROOT / "configs" / "trinity.yaml"
 
@@ -84,6 +86,7 @@ class CoordinatorEncoder:
         device: str = "cuda:0",
         dtype: str = "bfloat16",
         l2_normalize: bool = True,
+        encoding: EncodingConfig | None = None,
     ) -> None:
         # Lazy, file-local imports: the dev machine has no torch/GPU.
         import torch
@@ -92,6 +95,7 @@ class CoordinatorEncoder:
         self.model_name = model_name
         self.device = device
         self.l2_normalize = bool(l2_normalize)
+        self.encoding = encoding or EncodingConfig()
 
         self._torch = torch
         self._dtype = self._resolve_dtype(dtype)
@@ -192,6 +196,8 @@ class CoordinatorEncoder:
         """
         torch = self._torch
 
+        transcript_text = apply_instruction_prefix(transcript_text, self.encoding)
+
         # Tokenize WITHOUT auto special tokens so we control the sequence layout,
         # then append exactly one EOS as the final position. The last real
         # content token therefore sits at index -2 (the <Head Input> position).
@@ -254,11 +260,13 @@ class CoordinatorEncoder:
             device=coord.get("device", "cuda:0"),
             dtype=coord.get("dtype", "bfloat16"),
             l2_normalize=bool(hs.get("l2_normalize", True)),
+            encoding=EncodingConfig.from_coord_dict(coord),
         )
 
     def __repr__(self) -> str:  # pragma: no cover - cosmetic
         return (
             f"CoordinatorEncoder(model_name={self.model_name!r}, "
             f"device={self.device!r}, hidden_size={self.hidden_size}, "
-            f"num_layers={self.num_layers}, l2_normalize={self.l2_normalize})"
+            f"num_layers={self.num_layers}, l2_normalize={self.l2_normalize}, "
+            f"encoding={self.encoding!r})"
         )

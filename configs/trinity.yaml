@@ -12,6 +12,11 @@ coordinator:
     token: "penultimate"                # index -2 (NOT EOS; last-token collapses LCB >10pts)
     pool: "none"
     l2_normalize: true                  # [OUR CHOICE] stabilizes logit scale vs sigma0 (SPEC §0.3.2)
+    # Optional routing instruction prepended before tokenization (IMPROVEMENTS.md).
+    # DEFAULT OFF: legacy runs stay byte-identical; enabling invalidates old head ckpts.
+    instruction_prefix:
+      enabled: false
+      text: "Instruct: Select the best solver model and role for the following query.\nQuery: "
 
   head:
     type: "linear"                      # z = W h, no bias (best overall, Table 3)

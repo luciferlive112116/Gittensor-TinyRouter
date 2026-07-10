@@ -21,6 +21,7 @@ import numpy as np
 import yaml
 
 from .coordinator import params as P
+from .coordinator.encoding import EncodingConfig
 from .coordinator.policy import CoordinatorPolicy
 from .llm.openrouter_client import OpenRouterPool
 from .optim.fitness import FitnessConfig, evaluate_population
@@ -61,6 +62,9 @@ async def train(args) -> dict:
     # Training-only fitness shaping (improvement #3). Defaults preserve the
     # original mean-binary fitness exactly. The eval path stays pure binary.
     fitness_cfg = FitnessConfig.from_dict(cfg.get("fitness"))
+    enc_cfg = EncodingConfig.from_coord_dict(cc)
+    if enc_cfg.active:
+        print(f"[train] instruction prefix ACTIVE ({len(enc_cfg.prefix)} chars)")
     if getattr(args, "enable_reweight", False) and not fitness_cfg.enable_reweight:
         import dataclasses
         fitness_cfg = dataclasses.replace(fitness_cfg, enable_reweight=True)
@@ -82,6 +86,7 @@ async def train(args) -> dict:
         n_models=n_models,
         n_roles=cc["head"].get("n_roles", 3),
         l2_normalize=cc["hidden_state"].get("l2_normalize", True),
+        encoding=enc_cfg,
     )
     assert spec.n_svf == int(policy.svf.num_scales), (
         f"spec.n_svf={spec.n_svf} != svf.num_scales={policy.svf.num_scales}"
@@ -173,6 +178,7 @@ async def train(args) -> dict:
         "m_cma": m_cma,
         "generations": gen,
         "best_fitness": float(best_f),
+        "instruction_prefix_enabled": enc_cfg.active,
         "run_dir": str(run_dir),
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))
