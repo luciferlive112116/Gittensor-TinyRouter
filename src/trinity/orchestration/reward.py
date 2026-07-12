@@ -541,6 +541,11 @@ def normalize_math_answer(ans: str | None) -> str:
     # (the product symbol) is intentionally left untouched.
     s = re.sub(r"\\pi(?![a-zA-Z])", "pi", s)
     s = s.replace("π", "pi")
+    # The fraction normalizer wraps arbitrary operands, so ``\frac{\pi}{2}``
+    # becomes ``(pi)/(2)`` while ``\pi/2`` becomes ``pi/2``. Remove only
+    # standalone atomic operands adjacent to division; this keeps function-call
+    # parentheses such as ``sqrt(2)`` intact without requiring optional sympy.
+    s = re.sub(r"(^|/)\((pi|\d+)\)(?=/|$)", r"\1\2", s)
     s = re.sub(r"\s+", "", s)
     # LaTeX digit grouping "1{,}000" -> "1,000" so the comma-strip below removes it
     # (a boxed answer like \boxed{2{,}048} otherwise never matches "2048").

@@ -18,6 +18,19 @@ protocol. **Newest entries at the top.** Tag each entry with one or more of:
 
 ---
 
+## 2026-07-12 — Pi fractions depended on optional SymPy for equivalent normalization  #mistake #decision #repro
+
+**Context:** resolving the sqrt-normalization PR after the pi-normalization PR merged.
+**Expected:** `\frac{\pi}{2}` and `\pi/2` grade equally even when SymPy is unavailable.
+**Actual:** the fraction rule produced `(pi)/(2)` while the slash form produced `pi/2`; exact
+comparison failed and the guarded symbolic fallback returns false on installations without SymPy.
+**Root cause:** the generic fraction normalizer preserves grouping parentheses, but the equivalent
+plain slash spelling has none.
+**Fix / decision:** remove parentheses only around atomic `pi` or integer operands adjacent to a
+division operator. This canonicalizes those equivalent forms while preserving function calls such
+as `sqrt(2)`. The existing pi-fraction regression test now passes without SymPy.
+**Follow-up:** none.
+
 ## 2026-07-11 — dataset-quality audit missed a None prompt and mis-flagged it as a duplicate  #mistake #gotcha #repro
 
 **Context:** reading the new `trinity.dataset_quality.audit_dataset` (the offline data-quality audit
