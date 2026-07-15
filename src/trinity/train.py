@@ -130,6 +130,11 @@ async def train(args) -> dict:
     cc = cfg["coordinator"]
     sc = cfg["sep_cmaes"]
     sess = cfg.get("session", {})
+    # Seed torch so policy sampling (torch.multinomial in head.select) is
+    # reproducible from --seed (issue #130). Without this the global torch RNG
+    # draws from OS entropy and two runs at the same seed diverge.
+    import torch
+    torch.manual_seed(args.seed)
     # Training-only fitness shaping (improvement #3). Defaults preserve the
     # original mean-binary fitness exactly. The eval path stays pure binary.
     fitness_cfg = FitnessConfig.from_dict(cfg.get("fitness"))

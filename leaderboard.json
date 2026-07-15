@@ -11,5 +11,37 @@
     "baseline_best_single": null,
     "baseline_random": null,
     "history": []
+  },
+  "benchmarks": {
+    "math500": {
+      "best_score": 0.0,
+      "best_miner": null,
+      "best_generation": 0,
+      "best_pr": null,
+      "baseline_random": 0.792,
+      "best_single_model": 0.817,
+      "oracle_ceiling": 0.856,
+      "history": []
+    },
+    "mmlu": {
+      "best_score": 0.0,
+      "best_miner": null,
+      "best_generation": 0,
+      "best_pr": null,
+      "baseline_random": 0.875,
+      "best_single_model": 0.922,
+      "oracle_ceiling": 0.939,
+      "history": []
+    },
+    "livecodebench": {
+      "best_score": 0.0,
+      "best_miner": null,
+      "best_generation": 0,
+      "best_pr": null,
+      "baseline_random": null,
+      "best_single_model": null,
+      "oracle_ceiling": null,
+      "history": []
+    }
   }
 }

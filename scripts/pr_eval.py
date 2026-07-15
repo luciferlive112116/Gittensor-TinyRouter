@@ -281,10 +281,20 @@ def _king_submission_dir(
     lb: dict,
     submissions_root: Path,
 ) -> Optional[Path]:
-    """Return the reigning submission directory for ``benchmark``, if any."""
-    bench_entry = lb.get("benchmarks", {}).get(benchmark, {})
-    king_miner = bench_entry.get("best_miner")
-    king_gen = bench_entry.get("best_generation", 0)
+    """Return the reigning submission directory, if any.
+
+    Checks the composite ``competition`` king first (the single king across all
+    benchmarks), then falls back to a per-benchmark king for backward compat.
+    """
+    # Composite competition: one king across all benchmarks.
+    comp = lb.get("competition", {})
+    king_miner = comp.get("best_miner")
+    king_gen = comp.get("best_generation", 0)
+    if not king_miner or not king_gen:
+        # Backward compat: per-benchmark king (legacy leaderboard shape).
+        bench_entry = lb.get("benchmarks", {}).get(benchmark, {})
+        king_miner = bench_entry.get("best_miner")
+        king_gen = bench_entry.get("best_generation", 0)
     if not king_miner or not king_gen:
         return None
     king_dir = submissions_root / str(king_miner) / str(king_gen)
@@ -381,7 +391,11 @@ def _record_attempt(benchmark: str, miner_name: str, generation: int,
         benchmark, _empty_bench_entry(),
     )
     if "attempts" not in bench_entry:
-        bench_entry["attempts"] = []
+        # Seed from legacy win-only history so a recent winner stays rate-limited
+        # after this change rolls out (backward compat for pre-attempts leaderboards).
+        bench_entry["attempts"] = [
+            dict(entry) for entry in bench_entry.get("history", [])
+        ]
     already = any(
         e.get("miner") == miner_name and e.get("pr") == pr_number
         for e in bench_entry["attempts"]
